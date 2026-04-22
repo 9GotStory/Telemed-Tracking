@@ -42,51 +42,51 @@
 
 ### TypeScript Types
 
-- [ ] T011 [P] Create Hospital type in `src/types/hospital.ts` — interface Hospital with hosp_code, hosp_name, hosp_type, active per SCHEMA.md
-- [ ] T012 [P] Create User types in `src/types/user.ts` — UserRole union, UserStatus union, User interface per SCHEMA.md
-- [ ] T013 [P] Create Equipment types in `src/types/equipment.ts` — EquipSetType, EquipStatus unions, Equipment interface per SCHEMA.md
-- [ ] T014 [P] Create Visit types in `src/types/visit.ts` — ClinicType, DiffStatus, DrugSource, MedStatus unions; VisitSummary, VisitMed interfaces per SCHEMA.md
-- [ ] T015 [P] Create Drug type in `src/types/drug.ts` — MasterDrug interface per SCHEMA.md
-- [ ] T016 [P] Create Schedule type in `src/types/schedule.ts` — ClinicSchedule interface with optional actual_count per SCHEMA.md
-- [ ] T017 [P] Create Readiness types in `src/types/readiness.ts` — OverallStatus union, ReadinessLog interface per SCHEMA.md
-- [ ] T018 [P] Create Followup type in `src/types/followup.ts` — Followup interface per SCHEMA.md
-- [ ] T019 [P] Create AuditLog type in `src/types/auditLog.ts` — AuditAction union, AuditLog interface per SCHEMA.md
-- [ ] T020 [P] Create Facility type in `src/types/facility.ts` — Facility interface per SCHEMA.md
-- [ ] T021 [P] Create API response types in `src/types/api.ts` — generic GasResponse<T> wrapper { success, data, error }, LoginResponse type
+- [x] T011 [P] Create Hospital type in `src/types/hospital.ts` — interface Hospital with hosp_code, hosp_name, hosp_type, active per SCHEMA.md
+- [x] T012 [P] Create User types in `src/types/user.ts` — UserRole union, UserStatus union, User interface per SCHEMA.md
+- [x] T013 [P] Create Equipment types in `src/types/equipment.ts` — EquipSetType, EquipStatus unions, Equipment interface per SCHEMA.md
+- [x] T014 [P] Create Visit types in `src/types/visit.ts` — ClinicType, DiffStatus, DrugSource, MedStatus unions; VisitSummary, VisitMed interfaces per SCHEMA.md
+- [x] T015 [P] Create Drug type in `src/types/drug.ts` — MasterDrug interface per SCHEMA.md
+- [x] T016 [P] Create Schedule type in `src/types/schedule.ts` — ClinicSchedule interface with optional actual_count per SCHEMA.md
+- [x] T017 [P] Create Readiness types in `src/types/readiness.ts` — OverallStatus union, ReadinessLog interface per SCHEMA.md
+- [x] T018 [P] Create Followup type in `src/types/followup.ts` — Followup interface per SCHEMA.md
+- [x] T019 [P] Create AuditLog type in `src/types/auditLog.ts` — AuditAction union, AuditLog interface per SCHEMA.md
+- [x] T020 [P] Create Facility type in `src/types/facility.ts` — Facility interface per SCHEMA.md
+- [x] T021 [P] Create API response types in `src/types/api.ts` — generic GasResponse<T> wrapper { success, data, error }, LoginResponse type
 
 ### Constants
 
-- [ ] T022 [P] Create role constants and permission matrix in `src/constants/roles.ts` — ROLE_PERMISSIONS mapping each role to allowed actions per SPEC.md Section 3 Role Permissions Matrix
-- [ ] T023 [P] Create clinic type constants in `src/constants/clinicTypes.ts` — CLINIC_TYPES array with value + Thai label for all 6 types per SPEC.md Section 4 Module 3
-- [ ] T024 [P] Create drug source constants in `src/constants/drugSources.ts` — DRUG_SOURCES array with value + Thai label for hsc_stock, hosp_stock, hosp_pending per SPEC.md Section 4 Module 5
+- [x] T022 [P] Create role constants and permission matrix in `src/constants/roles.ts` — ROLE_PERMISSIONS mapping each role to allowed actions per SPEC.md Section 3 Role Permissions Matrix
+- [x] T023 [P] Create clinic type constants in `src/constants/clinicTypes.ts` — CLINIC_TYPES array with value + Thai label for all 6 types per SPEC.md Section 4 Module 3
+- [x] T024 [P] Create drug source constants in `src/constants/drugSources.ts` — DRUG_SOURCES array with value + Thai label for hsc_stock, hosp_stock, hosp_pending per SPEC.md Section 4 Module 5
 
 ### Core Services & Utilities
 
-- [ ] T025 Create GAS fetch wrapper in `src/services/api.ts` — gasGet<T> (query params, no headers) and gasPost<T> (body JSON, no Content-Type) per CLAUDE.md GAS Communication Pattern. Read VITE_GAS_API_URL from env, getToken() from sessionStorage. Throw on !json.success. Return type is unknown — callers validate with Zod
-- [ ] T026 [P] Create date utilities in `src/utils/dateUtils.ts` — buddhistToISO (DD/MM/YYYY พ.ศ. → ISO), formatBuddhist (ISO → พ.ศ. display), formatDate (ISO → readable Thai format) using date-fns per research.md R6
-- [ ] T027 [P] Create role guard utilities in `src/utils/roleGuard.ts` — canAccess(hosp_code, user), canManage(targetRole, userRole), isModuleAllowed(module, role) functions per SPEC.md Role Permissions Matrix
-- [ ] T028 [P] Create Excel parser utility in `src/utils/excelParser.ts` — SheetJS wrapper: parseHosXPExport(arrayBuffer) → validates column headers, groups by VN, returns structured data per SPEC.md Section 6
+- [x] T025 Create GAS fetch wrapper in `src/services/api.ts` — gasGet<T> (query params, no headers) and gasPost<T> (body JSON, no Content-Type) per CLAUDE.md GAS Communication Pattern. Read VITE_GAS_API_URL from env, getToken() from sessionStorage. Throw on !json.success. Return type is unknown — callers validate with Zod
+- [x] T026 [P] Create date utilities in `src/utils/dateUtils.ts` — buddhistToISO (DD/MM/YYYY พ.ศ. → ISO), formatBuddhist (ISO → พ.ศ. display), formatDate (ISO → readable Thai format) using date-fns per research.md R6
+- [x] T027 [P] Create role guard utilities in `src/utils/roleGuard.ts` — canAccess(hosp_code, user), canManage(targetRole, userRole), isModuleAllowed(module, role) functions per SPEC.md Role Permissions Matrix
+- [x] T028 [P] Create Excel parser utility in `src/utils/excelParser.ts` — SheetJS wrapper: parseHosXPExport(arrayBuffer) → validates column headers, groups by VN, returns structured data per SPEC.md Section 6
 
 ### State Management
 
-- [ ] T029 Create auth store in `src/stores/authStore.ts` — Zustand store: token (from sessionStorage), user (role, hosp_code, first_name, last_name), isAuthenticated, setAuth(), clearAuth(), hydrate() per plan.md State Management Architecture
-- [ ] T030 Create UI store in `src/stores/uiStore.ts` — Zustand store: sidebarOpen, toggleSidebar(), toasts queue per plan.md State Management Architecture
+- [x] T029 Create auth store in `src/stores/authStore.ts` — Zustand store: token (from sessionStorage), user (role, hosp_code, first_name, last_name), isAuthenticated, setAuth(), clearAuth(), hydrate() per plan.md State Management Architecture
+- [x] T030 Create UI store in `src/stores/uiStore.ts` — Zustand store: sidebarOpen, toggleSidebar(), toasts queue per plan.md State Management Architecture
 
 ### Layout & Common Components
 
-- [ ] T031 Create app entry in `src/main.tsx` — React 19 createRoot, BrowserRouter, QueryClientProvider (staleTime: 30s, retry: 1), App component
-- [ ] T032 Create Sidebar in `src/components/layout/Sidebar.tsx` — Dark glass nav (rgba(0,0,0,0.8) + backdrop-filter blur), module links with Lucide icons, collapsible on mobile via Sheet, active state Apple Blue underline, role-based link visibility per DESIGN.md
-- [ ] T033 Create Header in `src/components/layout/Header.tsx` — App name from env, user dropdown (name + role badge), logout button, breadcrumb from route
-- [ ] T034 Create PageWrapper in `src/components/layout/PageWrapper.tsx` — Responsive container (max-w-[980px] centered), #f5f5f7 background, padding per DESIGN.md spacing
-- [ ] T035 [P] Create StatusBadge in `src/components/common/StatusBadge.tsx` — Variant-based badge: active/ready (Apple Blue bg), pending/warning (#fafafc bg), inactive/error (#1d1d1f bg), 8px radius, 14px weight 600 per DESIGN.md
-- [ ] T036 [P] Create ConfirmModal in `src/components/common/ConfirmModal.tsx` — shadcn Dialog wrapper with title, description, confirm/cancel buttons (Apple Blue + dark variant) per DESIGN.md
-- [ ] T037 [P] Create LoadingSpinner in `src/components/common/LoadingSpinner.tsx` — Centered spinner component with optional text
-- [ ] T038 Create RoleGuard component in `src/components/common/RoleGuard.tsx` — Accepts allowedRoles prop, checks authStore, redirects to /login if not authenticated, shows nothing if role insufficient
-- [ ] T039 Create DataTable in `src/components/common/DataTable.tsx` — Generic table with sort headers, optional pagination, filter controls (11px radius buttons), responsive stacked view on mobile per DESIGN.md Data Tables pattern
+- [x] T031 Create app entry in `src/main.tsx` — React 19 createRoot, BrowserRouter, QueryClientProvider (staleTime: 30s, retry: 1), App component
+- [x] T032 Create Sidebar in `src/components/layout/Sidebar.tsx` — Dark glass nav (rgba(0,0,0,0.8) + backdrop-filter blur), module links with Lucide icons, collapsible on mobile via Sheet, active state Apple Blue underline, role-based link visibility per DESIGN.md
+- [x] T033 Create Header in `src/components/layout/Header.tsx` — App name from env, user dropdown (name + role badge), logout button, breadcrumb from route
+- [x] T034 Create PageWrapper in `src/components/layout/PageWrapper.tsx` — Responsive container (max-w-[980px] centered), #f5f5f7 background, padding per DESIGN.md spacing
+- [x] T035 [P] Create StatusBadge in `src/components/common/StatusBadge.tsx` — Variant-based badge: active/ready (Apple Blue bg), pending/warning (#fafafc bg), inactive/error (#1d1d1f bg), 8px radius, 14px weight 600 per DESIGN.md
+- [x] T036 [P] Create ConfirmModal in `src/components/common/ConfirmModal.tsx` — shadcn Dialog wrapper with title, description, confirm/cancel buttons (Apple Blue + dark variant) per DESIGN.md
+- [x] T037 [P] Create LoadingSpinner in `src/components/common/LoadingSpinner.tsx` — Centered spinner component with optional text
+- [x] T038 Create RoleGuard component in `src/components/common/RoleGuard.tsx` — Accepts allowedRoles prop, checks authStore, redirects to /login if not authenticated, shows nothing if role insufficient
+- [x] T039 Create DataTable in `src/components/common/DataTable.tsx` — Generic table with sort headers, optional pagination, filter controls (11px radius buttons), responsive stacked view on mobile per DESIGN.md Data Tables pattern
 
 ### Router
 
-- [ ] T040 Create React Router config in `src/router.tsx` — All 12 routes: /login, /register (public), /dashboard (public), /module1-6, /master-drugs, /users, /settings (protected). ProtectedRoute wrapper using RoleGuard per plan.md Layout System. AppLayout wrapping Sidebar+Header+PageWrapper for protected routes
+- [x] T040 Create React Router config in `src/router.tsx` — All 12 routes: /login, /register (public), /dashboard (public), /module1-6, /master-drugs, /users, /settings (protected). ProtectedRoute wrapper using RoleGuard per plan.md Layout System. AppLayout wrapping Sidebar+Header+PageWrapper for protected routes
 
 **Checkpoint**: Foundation ready — blank app renders with sidebar, header, routing works, all types and constants available, api.ts and stores functional. `npm run build` passes with no type errors.
 
@@ -98,13 +98,13 @@
 
 **Independent Test**: Register a new user → login → see dashboard redirect → logout → session cleared
 
-- [ ] T041 Create Zod schemas for auth in `src/services/authService.ts` — loginSchema (hosp_code 5 chars, password min 8), registerSchema (hosp_code, password, first_name, last_name, tel 9-10 digits) per contracts/auth.md
-- [ ] T042 Add auth GAS actions in `src/services/authService.ts` — login(payload), register(payload), logout() functions calling gasPost with Zod-validated responses per contracts/auth.md
-- [ ] T043 Create auth hooks in `src/hooks/useAuth.ts` — useLogin() (mutation → setAuth on success), useRegister() (mutation), useLogout() (mutation → clearAuth + redirect) per plan.md TanStack Query hooks
-- [ ] T044 Create Login page in `src/modules/auth/LoginPage.tsx` — Form with hosp_code + password inputs, submit calls useLogin, error display per DESIGN.md Forms spec, link to Register. Full-page layout (no sidebar), centered card
-- [ ] T045 Create Register page in `src/modules/auth/RegisterPage.tsx` — Form with hosp_code, password, first_name, last_name, tel inputs, submit calls useRegister, Zod validation inline, success message "Awaiting approval", link back to Login
-- [ ] T046 Implement session management — On app load (main.tsx): call authStore.hydrate() to restore from sessionStorage. Add global error handler: if any GAS call returns "Unauthorized", call clearAuth() and redirect to /login
-- [ ] T047 Implement GAS auth handlers in `backend/Code.gs` — doGet/doPost entry points, validateSession(token), routeAction router, hashPassword/verifyPassword (iterated HMAC-SHA256 per research.md R1), buildResponse helper per CLAUDE.md GAS Pattern
+- [x] T041 Create Zod schemas for auth in `src/services/authService.ts` — loginSchema (hosp_code 5 chars, password min 8), registerSchema (hosp_code, password, first_name, last_name, tel 9-10 digits) per contracts/auth.md
+- [x] T042 Add auth GAS actions in `src/services/authService.ts` — login(payload), register(payload), logout() functions calling gasPost with Zod-validated responses per contracts/auth.md
+- [x] T043 Create auth hooks in `src/hooks/useAuth.ts` — useLogin() (mutation → setAuth on success), useRegister() (mutation), useLogout() (mutation → clearAuth + redirect) per plan.md TanStack Query hooks
+- [x] T044 Create Login page in `src/modules/auth/LoginPage.tsx` — Form with hosp_code + password inputs, submit calls useLogin, error display per DESIGN.md Forms spec, link to Register. Full-page layout (no sidebar), centered card
+- [x] T045 Create Register page in `src/modules/auth/RegisterPage.tsx` — Form with hosp_code, password, first_name, last_name, tel inputs, submit calls useRegister, Zod validation inline, success message "Awaiting approval", link back to Login
+- [x] T046 Implement session management — On app load (main.tsx): call authStore.hydrate() to restore from sessionStorage. Add global error handler: if any GAS call returns "Unauthorized", call clearAuth() and redirect to /login
+- [x] T047 Implement GAS auth handlers in `backend/Code.gs` — doGet/doPost entry points, validateSession(token), routeAction router, hashPassword/verifyPassword (iterated HMAC-SHA256 per research.md R1), buildResponse helper per CLAUDE.md GAS Pattern
 
 **Checkpoint**: User can register (status=pending), login (after manual DB activation), see authenticated routes, logout clears session. GAS backend handles auth.login, auth.register, auth.logout.
 
@@ -116,13 +116,13 @@
 
 **Independent Test**: Login as staff_hsc → add Set A equipment → edit OS field → soft-delete → verify inactive equipment hidden from list
 
-- [ ] T048 [US4] Create equipment Zod schemas in `src/services/equipmentService.ts` — EquipmentSchema for form validation, EquipmentListResponseSchema for API response per contracts/equipment.md
-- [ ] T049 [US4] Add equipment GAS actions in `src/services/equipmentService.ts` — list(filters), save(data), delete(equipId) functions per contracts/equipment.md
-- [ ] T050 [US4] Create equipment hooks in `src/modules/module1/useEquipment.ts` — useEquipmentList(filters), useEquipmentSave(), useEquipmentDelete() with cache invalidation per plan.md TanStack Query hooks
-- [ ] T051 [P] [US4] Create EquipmentForm in `src/modules/module1/EquipmentForm.tsx` — React Hook Form + Zod: set_type (A/B toggle), device_type, OS, status, is_backup, software checkboxes, internet_mbps, responsible_person/tel, note per DESIGN.md Forms spec
-- [ ] T052 [P] [US4] Create EquipmentTable in `src/modules/module1/EquipmentTable.tsx` — DataTable showing equip list: hosp_name, set_type badge, device_type, status (StatusBadge), OS, actions (edit/delete). staff_hsc sees only their hosp_code per DESIGN.md Data Tables
-- [ ] T053 [US4] Create EquipmentPage in `src/modules/module1/EquipmentPage.tsx` — Page with header "ทะเบียนอุปกรณ์", filter by hosp_code (admin+) / status, EquipmentTable, FAB/button to open EquipmentForm dialog, soft-delete with ConfirmModal
-- [ ] T054 [US4] Implement GAS equipment handlers in `backend/Code.gs` — equipment.list (role-filtered, JOIN FACILITIES for hosp_name), equipment.save (generate UUID, validate hosp_code ownership), equipment.delete (set status=inactive, AUDIT_LOG) per contracts/equipment.md
+- [x] T048 [US4] Create equipment Zod schemas in `src/services/equipmentService.ts` — EquipmentSchema for form validation, EquipmentListResponseSchema for API response per contracts/equipment.md
+- [x] T049 [US4] Add equipment GAS actions in `src/services/equipmentService.ts` — list(filters), save(data), delete(equipId) functions per contracts/equipment.md
+- [x] T050 [US4] Create equipment hooks in `src/modules/module1/useEquipment.ts` — useEquipmentList(filters), useEquipmentSave(), useEquipmentDelete() with cache invalidation per plan.md TanStack Query hooks
+- [x] T051 [P] [US4] Create EquipmentForm in `src/modules/module1/EquipmentForm.tsx` — React Hook Form + Zod: set_type (A/B toggle), device_type, OS, status, is_backup, software checkboxes, internet_mbps, responsible_person/tel, note per DESIGN.md Forms spec
+- [x] T052 [P] [US4] Create EquipmentTable in `src/modules/module1/EquipmentTable.tsx` — DataTable showing equip list: hosp_name, set_type badge, device_type, status (StatusBadge), OS, actions (edit/delete). staff_hsc sees only their hosp_code per DESIGN.md Data Tables
+- [x] T053 [US4] Create EquipmentPage in `src/modules/module1/EquipmentPage.tsx` — Page with header "ทะเบียนอุปกรณ์", filter by hosp_code (admin+) / status, EquipmentTable, FAB/button to open EquipmentForm dialog, soft-delete with ConfirmModal
+- [x] T054 [US4] Implement GAS equipment handlers in `backend/Code.gs` — equipment.list (role-filtered, JOIN FACILITIES for hosp_name), equipment.save (generate UUID, validate hosp_code ownership), equipment.delete (set status=inactive, AUDIT_LOG) per contracts/equipment.md
 
 **Checkpoint**: Module 1 fully functional. Can add/edit/soft-delete equipment. Role-based visibility works. GAS backend handles all equipment actions.
 
@@ -134,14 +134,14 @@
 
 **Independent Test**: Login as admin_hosp → add new drug → edit strength → soft-delete → verify FK protection when drug is referenced in VISIT_MEDS
 
-- [ ] T055 [US3] Create drug Zod schemas in `src/services/drugService.ts` — MasterDrugSchema, DrugListResponseSchema per contracts/master-drug.md
-- [ ] T056 [US3] Add drug GAS actions in `src/services/drugService.ts` — list(filters), save(data), delete(drugId), importExcel(drugs[]) functions per contracts/master-drug.md
-- [ ] T057 [US3] Create drug hooks in `src/modules/master-drugs/useMasterDrug.ts` — useDrugList(filters), useDrugSave(), useDrugDelete(), useDrugImport() with cache invalidation
-- [ ] T058 [US3] Create DrugForm in `src/modules/master-drugs/DrugForm.tsx` — React Hook Form + Zod: drug_name, strength, unit fields. Show warning if drug_name change blocked (referenced in VISIT_MEDS)
-- [ ] T059 [US3] Create DrugTable in `src/modules/master-drugs/DrugTable.tsx` — DataTable: drug_name, strength, unit, active status (StatusBadge), actions. Filter by active/inactive, text search on drug_name
-- [ ] T060 [US3] Create DrugImport in `src/modules/master-drugs/DrugImport.tsx` — Excel upload + SheetJS parse, preview table, confirm import with summary ("Imported X / Skipped Y / Errors Z")
-- [ ] T061 [US3] Create MasterDrugPage in `src/modules/master-drugs/MasterDrugPage.tsx` — Page with header "คลังชื่อยา", DrugTable, add/edit via DrugForm dialog, import via DrugImport. RoleGuard: super_admin + admin_hosp only
-- [ ] T062 [US3] Implement GAS master drug handlers in `backend/Code.gs` — masterDrug.list (with search filter), masterDrug.save (FK check before drug_name change), masterDrug.delete (active=N), masterDrug.import (batch insert, skip duplicates, AUDIT_LOG) per contracts/master-drug.md
+- [x] T055 [US3] Create drug Zod schemas in `src/services/drugService.ts` — MasterDrugSchema, DrugListResponseSchema per contracts/master-drug.md
+- [x] T056 [US3] Add drug GAS actions in `src/services/drugService.ts` — list(filters), save(data), delete(drugId), importExcel(drugs[]) functions per contracts/master-drug.md
+- [x] T057 [US3] Create drug hooks in `src/modules/master-drugs/useMasterDrug.ts` — useDrugList(filters), useDrugSave(), useDrugDelete(), useDrugImport() with cache invalidation
+- [x] T058 [US3] Create DrugForm in `src/modules/master-drugs/DrugForm.tsx` — React Hook Form + Zod: drug_name, strength, unit fields. Show warning if drug_name change blocked (referenced in VISIT_MEDS)
+- [x] T059 [US3] Create DrugTable in `src/modules/master-drugs/DrugTable.tsx` — DataTable: drug_name, strength, unit, active status (StatusBadge), actions. Filter by active/inactive, text search on drug_name
+- [x] T060 [US3] Create DrugImport in `src/modules/master-drugs/DrugImport.tsx` — Excel upload + SheetJS parse, preview table, confirm import with summary ("Imported X / Skipped Y / Errors Z")
+- [x] T061 [US3] Create MasterDrugPage in `src/modules/master-drugs/MasterDrugPage.tsx` — Page with header "คลังชื่อยา", DrugTable, add/edit via DrugForm dialog, import via DrugImport. RoleGuard: super_admin + admin_hosp only
+- [x] T062 [US3] Implement GAS master drug handlers in `backend/Code.gs` — masterDrug.list (with search filter), masterDrug.save (FK check before drug_name change), masterDrug.delete (active=N), masterDrug.import (batch insert, skip duplicates, AUDIT_LOG) per contracts/master-drug.md
 
 **Checkpoint**: Master Drug management complete. Can add/edit/soft-delete/search/import drugs. FK protection on drug_name changes works. Data available for Module 4/5 dropdowns.
 

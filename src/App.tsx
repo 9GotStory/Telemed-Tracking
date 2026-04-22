@@ -1,10 +1,24 @@
+import { RouterProvider } from 'react-router-dom'
+import { router } from '@/router'
+import { useAuthStore } from '@/stores/authStore'
+import { useEffect } from 'react'
+
+function AuthHydrator() {
+  const hydrate = useAuthStore((s) => s.hydrate)
+
+  useEffect(() => {
+    hydrate()
+  }, [hydrate])
+
+  return null
+}
+
 function App() {
   return (
-    <div className="min-h-svh flex items-center justify-center">
-      <h1 className="text-2xl font-semibold tracking-tight text-near-black">
-        Telemed Tracking คปสอ.สอง
-      </h1>
-    </div>
+    <>
+      <AuthHydrator />
+      <RouterProvider router={router} />
+    </>
   )
 }
 

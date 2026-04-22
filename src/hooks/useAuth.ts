@@ -1,0 +1,58 @@
+import { useMutation } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
+import { useAuthStore } from '@/stores/authStore'
+import { authService } from '@/services/authService'
+import type { LoginFormValues, RegisterFormValues } from '@/services/authService'
+import type { AuthUser } from '@/types/user'
+
+/**
+ * Login mutation — calls authService.login, stores session.
+ * Component handles redirect via store-driven <Navigate>.
+ */
+export function useLogin() {
+  const setAuth = useAuthStore((s) => s.setAuth)
+
+  return useMutation({
+    mutationFn: (credentials: LoginFormValues) => authService.login(credentials),
+    onSuccess: (data) => {
+      const user: AuthUser = {
+        user_id: data.user_id,
+        hosp_code: data.hosp_code,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        role: data.role,
+        hosp_name: data.hosp_name,
+      }
+      setAuth(data.token, user)
+    },
+  })
+}
+
+/**
+ * Register mutation — calls authService.register.
+ * Use `mutate(payload)` to trigger. Check `isSuccess` for "awaiting approval" state.
+ */
+export function useRegister() {
+  return useMutation({
+    mutationFn: (payload: RegisterFormValues) => authService.register(payload),
+  })
+}
+
+/**
+ * Logout mutation — calls authService.logout, clears session, redirects to login.
+ * Always clears local state even if the API call fails.
+ */
+export function useLogout() {
+  const clearAuth = useAuthStore((s) => s.clearAuth)
+  const navigate = useNavigate()
+
+  return useMutation({
+    mutationFn: () => authService.logout(),
+    onSettled: () => {
+      clearAuth()
+      navigate('/login', { replace: true })
+    },
+  })
+}
+
+export type { LoginFormValues, RegisterFormValues }
