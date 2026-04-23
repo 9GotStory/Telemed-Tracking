@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
+import { QueryError } from '@/components/common/QueryError'
 import { PatientContactCard } from './PatientContactCard'
 import { FollowupForm } from './FollowupForm'
 import { useFollowupList } from './useFollowup'
@@ -18,11 +19,15 @@ const statusConfig: Record<string, { variant: 'active' | 'pending'; label: strin
 }
 
 export function FollowupList({ filters }: FollowupListProps) {
-  const { data: items = [], isLoading } = useFollowupList(filters)
+  const { data: items = [], isLoading, isError, refetch } = useFollowupList(filters)
   const [expandedVN, setExpandedVN] = useState<string | null>(null)
 
   if (isLoading) {
     return <LoadingSpinner text="กำลังโหลดรายการ..." />
+  }
+
+  if (isError) {
+    return <QueryError onRetry={() => refetch()} />
   }
 
   if (items.length === 0) {

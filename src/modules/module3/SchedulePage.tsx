@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/select'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
+import { QueryError } from '@/components/common/QueryError'
 import { useAuthStore } from '@/stores/authStore'
 import { useScheduleList } from './useSchedule'
 import { ScheduleGrid } from './ScheduleGrid'
@@ -48,8 +49,8 @@ export default function SchedulePage() {
     return f
   }, [months, clinicFilter])
 
-  const { data: schedules1 = [], isLoading: loading1 } = useScheduleList(filters)
-  const { data: schedules2 = [], isLoading: loading2 } = useScheduleList(filters2 ?? { month: '__none__' })
+  const { data: schedules1 = [], isLoading: loading1, isError: error1, refetch: refetch1 } = useScheduleList(filters)
+  const { data: schedules2 = [], isLoading: loading2, isError: error2, refetch: refetch2 } = useScheduleList(filters2 ?? { month: '__none__' })
 
   const schedules = useMemo(() => {
     if (months.length === 1) return schedules1
@@ -133,6 +134,8 @@ export default function SchedulePage() {
         {/* Content */}
         {isLoading ? (
           <LoadingSpinner text="กำลังโหลดตาราง..." />
+        ) : (error1 || error2) ? (
+          <QueryError onRetry={() => { refetch1(); refetch2() }} />
         ) : (
           <ScheduleGrid
             data={schedules}

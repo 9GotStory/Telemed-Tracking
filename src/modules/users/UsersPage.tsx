@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { PageWrapper } from '@/components/layout/PageWrapper'
+import { QueryError } from '@/components/common/QueryError'
 import {
   Select,
   SelectContent,
@@ -24,7 +25,7 @@ export default function UsersPage() {
     return f
   }, [statusFilter, roleFilter])
 
-  const { data: users = [], isLoading } = useUsersList(filters)
+  const { data: users = [], isLoading, isError, refetch } = useUsersList(filters)
   const pendingCount = users.filter((u) => u.status === 'pending').length
 
   return (
@@ -73,6 +74,8 @@ export default function UsersPage() {
         {/* User table */}
         {isLoading ? (
           <div className="text-center py-12 text-muted-foreground">กำลังโหลด...</div>
+        ) : isError ? (
+          <QueryError onRetry={() => refetch()} />
         ) : (
           <UserTable users={users} onApprove={(u) => setApproveUser(u)} />
         )}

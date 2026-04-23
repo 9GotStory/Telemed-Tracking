@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { PageWrapper } from '@/components/layout/PageWrapper'
+import { QueryError } from '@/components/common/QueryError'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -41,7 +42,7 @@ export default function DrugConfirmPage() {
     return f
   }, [serviceDate, hospCode])
 
-  const { data: patients = [], isLoading } = useVisitSummaryList(filters)
+  const { data: patients = [], isLoading, isError, refetch } = useVisitSummaryList(filters)
 
   // staff_hsc always filtered to own hosp_code
   const displayPatients = useMemo(() => {
@@ -93,7 +94,11 @@ export default function DrugConfirmPage() {
         </div>
 
         {/* Patient list */}
-        <PatientList patients={displayPatients} isLoading={isLoading} />
+        {isError ? (
+          <QueryError onRetry={() => refetch()} />
+        ) : (
+          <PatientList patients={displayPatients} isLoading={isLoading} />
+        )}
       </div>
     </PageWrapper>
   )

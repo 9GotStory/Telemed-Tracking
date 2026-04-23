@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { scheduleService, type ScheduleFilters } from '@/services/scheduleService'
 import type { ScheduleFormValues } from '@/services/scheduleService'
 
@@ -29,7 +30,9 @@ export function useScheduleSave() {
     mutationFn: (data: ScheduleFormValues) => scheduleService.save(data),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: scheduleKeys.all })
+      toast.success('บันทึกตารางคลินิกสำเร็จ')
     },
+    onError: (err) => { toast.error('บันทึกไม่สำเร็จ', { description: err.message }) },
   })
 }
 
@@ -44,7 +47,9 @@ export function useScheduleSetLink() {
       scheduleService.setLink(scheduleId, telemedLink),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: scheduleKeys.all })
+      toast.success('บันทึกลิงก์สำเร็จ')
     },
+    onError: (err) => { toast.error('บันทึกลิงก์ไม่สำเร็จ', { description: err.message }) },
   })
 }
 
@@ -59,6 +64,8 @@ export function useScheduleRecordIncident() {
       scheduleService.recordIncident(scheduleId, incidentNote),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: scheduleKeys.all })
+      toast.success('บันทึกหมายเหตุสำเร็จ')
     },
+    onError: (err) => { toast.error('บันทึกหมายเหตุไม่สำเร็จ', { description: err.message }) },
   })
 }

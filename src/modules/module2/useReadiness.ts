@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { readinessService, type ReadinessFilters } from '@/services/readinessService'
 import type { ReadinessFormValues } from '@/services/readinessService'
 
@@ -28,6 +29,8 @@ export function useReadinessSave() {
     mutationFn: (data: ReadinessFormValues) => readinessService.save(data),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: readinessKeys.all })
+      toast.success('บันทึกผลตรวจสอบสำเร็จ')
     },
+    onError: (err) => { toast.error('บันทึกไม่สำเร็จ', { description: err.message }) },
   })
 }

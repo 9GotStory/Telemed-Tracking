@@ -8,6 +8,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
+import { QueryError } from '@/components/common/QueryError'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { useScheduleList } from '@/modules/module3/useSchedule'
 import { useReadinessList } from './useReadiness'
@@ -51,10 +52,10 @@ export default function ReadinessPage() {
   const [historyDialog, setHistoryDialog] = useState<HistoryDialogState>({ hospCode: '', hospName: '', open: false })
 
   // Get schedules for tomorrow's month to know which facilities have clinics
-  const { data: schedules = [], isLoading: schedulesLoading } = useScheduleList({ month: tomorrowMonth })
+  const { data: schedules = [], isLoading: schedulesLoading, isError: schedulesError, refetch: refetchSchedules } = useScheduleList({ month: tomorrowMonth })
 
   // Get readiness logs for today
-  const { data: readinessLogs = [], isLoading: readinessLoading } = useReadinessList({ check_date: today })
+  const { data: readinessLogs = [], isLoading: readinessLoading, isError: readinessError, refetch: refetchReadiness } = useReadinessList({ check_date: today })
 
   // Build facility list from schedules that have clinics tomorrow
   const facilitiesWithClinics = useMemo(() => {
@@ -116,6 +117,8 @@ export default function ReadinessPage() {
         {/* Content */}
         {isLoading ? (
           <LoadingSpinner text="กำลังโหลดข้อมูล..." />
+        ) : (schedulesError || readinessError) ? (
+          <QueryError onRetry={() => { refetchSchedules(); refetchReadiness() }} />
         ) : displayedFacilities.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             ไม่มีคลินิกในวันพรุ่งนี้

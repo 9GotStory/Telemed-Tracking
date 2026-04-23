@@ -11,6 +11,7 @@ import {
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { ConfirmModal } from '@/components/common/ConfirmModal'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
+import { QueryError } from '@/components/common/QueryError'
 import { useAuthStore } from '@/stores/authStore'
 import { useEquipmentList, useEquipmentDelete } from './useEquipment'
 import { EquipmentTable } from './EquipmentTable'
@@ -39,7 +40,7 @@ export default function EquipmentPage() {
     return f
   }, [statusFilter])
 
-  const { data: equipment = [], isLoading } = useEquipmentList(filters)
+  const { data: equipment = [], isLoading, isError, refetch } = useEquipmentList(filters)
   const deleteMutation = useEquipmentDelete()
 
   const showHospName = user?.role === 'admin_hosp' || user?.role === 'super_admin'
@@ -98,6 +99,8 @@ export default function EquipmentPage() {
         {/* Content */}
         {isLoading ? (
           <LoadingSpinner text="กำลังโหลดข้อมูล..." />
+        ) : isError ? (
+          <QueryError onRetry={() => refetch()} />
         ) : (
           <EquipmentTable
             data={equipment}

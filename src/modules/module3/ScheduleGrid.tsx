@@ -87,103 +87,114 @@ export function ScheduleGrid({ data, weekStart, onEdit }: ScheduleGridProps) {
 
   return (
     <>
-      {/* Desktop: Weekly grid table */}
-      <div className="hidden md:block overflow-x-auto rounded-md border">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-btn-default-light/50">
-              <th className="sticky left-0 z-10 bg-btn-default-light/90 px-3 py-2 text-left font-semibold min-w-[120px]">
-                รพ.สต.
-              </th>
-              {weekDays.map((day, i) => (
-                <th key={dateStr(day)} className="px-2 py-2 text-center font-semibold min-w-[120px]">
-                  <div className="text-xs text-muted-foreground">{THAI_DAYS[i]}</div>
-                  <div className="text-sm">
-                    {format(day, 'd MMM', { locale: th })}
-                  </div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {facilities.map(([hospCode, hospName]) => (
-              <tr key={hospCode} className="border-t hover:bg-btn-default-light/20">
-                <td className="sticky left-0 z-10 bg-background px-3 py-1.5 font-medium text-xs">
-                  {hospName}
-                </td>
-                {weekDays.map((day) => {
-                  const key = `${hospCode}|${dateStr(day)}`
-                  const schedules = cellMap.get(key) ?? []
-                  return (
-                    <td key={key} className="px-1.5 py-1 align-top">
-                      {schedules.map((s) => (
-                        <button
-                          key={s.schedule_id}
-                          type="button"
-                          onClick={() => handleOpenDetail(s)}
-                          className="w-full text-left rounded-md px-2 py-1 mb-1 hover:bg-btn-default-light/50 transition-colors"
-                        >
-                          <div className="text-xs font-medium truncate">
-                            {getClinicLabel(s.clinic_type)}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {s.service_time}
-                          </div>
-                          <div className="flex items-center gap-1 text-xs">
-                            <span className="text-muted-foreground">
-                              {s.actual_count ?? 0}/{s.appoint_count}
-                            </span>
-                            {s.telemed_link && (
-                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-apple-blue" title="มีลิงก์ Telemed" />
-                            )}
-                          </div>
-                        </button>
-                      ))}
-                    </td>
-                  )
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* Empty state */}
+      {data.length === 0 && (
+        <div className="text-center py-12 text-muted-foreground">
+          ไม่พบตารางคลินิกในสัปดาห์นี้
+        </div>
+      )}
 
-      {/* Mobile: Scrollable day-by-day list */}
-      <div className="md:hidden flex flex-col gap-3">
-        {weekDays.map((day, dayIdx) => {
-          const daySchedules = data.filter((s) => s.service_date === dateStr(day))
-          if (daySchedules.length === 0) return null
-          return (
-            <div key={dateStr(day)} className="rounded-md border">
-              <div className="bg-btn-default-light/50 px-3 py-2 font-semibold text-sm">
-                {THAI_DAYS[dayIdx]} — {format(day, 'd MMMM yyyy', { locale: th })}
-              </div>
-              <div className="divide-y">
-                {daySchedules.map((s) => (
-                  <button
-                    key={s.schedule_id}
-                    type="button"
-                    onClick={() => handleOpenDetail(s)}
-                    className="w-full text-left px-3 py-2 hover:bg-btn-default-light/30 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{s.hosp_name ?? s.hosp_code}</span>
-                      <StatusBadge variant="active">{getClinicLabel(s.clinic_type)}</StatusBadge>
-                    </div>
-                    <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-                      <span>{s.service_time}</span>
-                      <span>ผู้ป่วย {s.actual_count ?? 0}/{s.appoint_count}</span>
-                      {s.telemed_link && (
-                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-apple-blue" />
-                      )}
-                    </div>
-                  </button>
+      {data.length > 0 && (
+        <>
+          {/* Desktop: Weekly grid table */}
+          <div className="hidden md:block overflow-x-auto rounded-md border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-btn-default-light/50">
+                  <th className="sticky left-0 z-10 bg-btn-default-light/90 px-3 py-2 text-left font-semibold min-w-[120px]">
+                    รพ.สต.
+                  </th>
+                  {weekDays.map((day, i) => (
+                    <th key={dateStr(day)} className="px-2 py-2 text-center font-semibold min-w-[120px]">
+                      <div className="text-xs text-muted-foreground">{THAI_DAYS[i]}</div>
+                      <div className="text-sm">
+                        {format(day, 'd MMM', { locale: th })}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {facilities.map(([hospCode, hospName]) => (
+                  <tr key={hospCode} className="border-t hover:bg-btn-default-light/20">
+                    <td className="sticky left-0 z-10 bg-background px-3 py-1.5 font-medium text-xs">
+                      {hospName}
+                    </td>
+                    {weekDays.map((day) => {
+                      const key = `${hospCode}|${dateStr(day)}`
+                      const schedules = cellMap.get(key) ?? []
+                      return (
+                        <td key={key} className="px-1.5 py-1 align-top">
+                          {schedules.map((s) => (
+                            <button
+                              key={s.schedule_id}
+                              type="button"
+                              onClick={() => handleOpenDetail(s)}
+                              className="w-full text-left rounded-md px-2 py-1 mb-1 hover:bg-btn-default-light/50 transition-colors"
+                            >
+                              <div className="text-xs font-medium truncate">
+                                {getClinicLabel(s.clinic_type)}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {s.service_time}
+                              </div>
+                              <div className="flex items-center gap-1 text-xs">
+                                <span className="text-muted-foreground">
+                                  {s.actual_count ?? 0}/{s.appoint_count}
+                                </span>
+                                {s.telemed_link && (
+                                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-apple-blue" title="มีลิงก์ Telemed" />
+                                )}
+                              </div>
+                            </button>
+                          ))}
+                        </td>
+                      )
+                    })}
+                  </tr>
                 ))}
-              </div>
-            </div>
-          )
-        })}
-      </div>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile: Scrollable day-by-day list */}
+          <div className="md:hidden flex flex-col gap-3">
+            {weekDays.map((day, dayIdx) => {
+              const daySchedules = data.filter((s) => s.service_date === dateStr(day))
+              if (daySchedules.length === 0) return null
+              return (
+                <div key={dateStr(day)} className="rounded-md border">
+                  <div className="bg-btn-default-light/50 px-3 py-2 font-semibold text-sm">
+                    {THAI_DAYS[dayIdx]} — {format(day, 'd MMMM yyyy', { locale: th })}
+                  </div>
+                  <div className="divide-y">
+                    {daySchedules.map((s) => (
+                      <button
+                        key={s.schedule_id}
+                        type="button"
+                        onClick={() => handleOpenDetail(s)}
+                        className="w-full text-left px-3 py-2 hover:bg-btn-default-light/30 transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">{s.hosp_name ?? s.hosp_code}</span>
+                          <StatusBadge variant="active">{getClinicLabel(s.clinic_type)}</StatusBadge>
+                        </div>
+                        <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                          <span>{s.service_time}</span>
+                          <span>ผู้ป่วย {s.actual_count ?? 0}/{s.appoint_count}</span>
+                          {s.telemed_link && (
+                            <span className="inline-block h-1.5 w-1.5 rounded-full bg-apple-blue" />
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
 
       {/* Detail Dialog */}
       <Dialog open={!!selectedSchedule} onOpenChange={(open) => { if (!open) setSelectedSchedule(null) }}>

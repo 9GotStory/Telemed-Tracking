@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { drugService, type DrugFilters } from '@/services/drugService'
 import type { DrugFormValues } from '@/services/drugService'
 
@@ -28,7 +29,9 @@ export function useDrugSave() {
     mutationFn: (data: DrugFormValues) => drugService.save(data),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: drugKeys.all })
+      toast.success('บันทึกยาสำเร็จ')
     },
+    onError: (err) => { toast.error('บันทึกยาไม่สำเร็จ', { description: err.message }) },
   })
 }
 
@@ -42,7 +45,9 @@ export function useDrugDelete() {
     mutationFn: (drugId: string) => drugService.delete(drugId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: drugKeys.all })
+      toast.success('ลบยาสำเร็จ')
     },
+    onError: (err) => { toast.error('ลบยาไม่สำเร็จ', { description: err.message }) },
   })
 }
 
@@ -57,6 +62,8 @@ export function useDrugImport() {
       drugService.importDrugs(drugs),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: drugKeys.all })
+      toast.success('นำเข้ายาสำเร็จ')
     },
+    onError: (err) => { toast.error('นำเข้ายาไม่สำเร็จ', { description: err.message }) },
   })
 }

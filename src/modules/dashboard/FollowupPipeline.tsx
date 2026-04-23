@@ -7,6 +7,14 @@ interface FollowupPipelineProps {
 export function FollowupPipeline({ pipeline }: FollowupPipelineProps) {
   const total = pipeline.followed + pipeline.pending
 
+  if (total === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        ยังไม่มีข้อมูลการติดตาม
+      </div>
+    )
+  }
+
   return (
     <div className="grid grid-cols-2 gap-4">
       <div className="rounded-lg bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] text-center">

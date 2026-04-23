@@ -1,5 +1,3 @@
-import * as XLSX from 'xlsx'
-
 /** Expected column headers in HosXP Excel export */
 const REQUIRED_COLUMNS = ['vn', 'hn', 'patient_name', 'dob', 'tel', 'drug_name', 'strength', 'qty', 'unit', 'sig'] as const
 
@@ -56,10 +54,13 @@ export interface ParseResult {
 /**
  * Parse HosXP Excel export using SheetJS.
  * Validates column headers, normalizes field names, groups by VN.
+ *
+ * Uses dynamic import to keep xlsx (500KB+) out of the main bundle.
  */
-export function parseHosXPExport(arrayBuffer: ArrayBuffer): ParseResult {
+export async function parseHosXPExport(arrayBuffer: ArrayBuffer): Promise<ParseResult> {
   const errors: string[] = []
 
+  const XLSX = await import('xlsx')
   const workbook = XLSX.read(arrayBuffer, { type: 'array' })
   const sheetName = workbook.SheetNames[0]
   if (!sheetName) {

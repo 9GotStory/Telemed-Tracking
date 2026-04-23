@@ -22,9 +22,9 @@ export function ExcelUploader({ onParsed }: ExcelUploaderProps) {
       setParseErrors([])
 
       const reader = new FileReader()
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const arrayBuffer = e.target?.result as ArrayBuffer
-        const result = parseHosXPExport(arrayBuffer)
+        const result = await parseHosXPExport(arrayBuffer)
         if (result.errors.length > 0) {
           setParseErrors(result.errors)
         }

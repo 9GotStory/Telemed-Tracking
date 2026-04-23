@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { visitService } from '@/services/visitService'
 import type { VisitSummaryFilters, VisitMedsSavePayload } from '@/services/visitService'
 
@@ -31,9 +32,10 @@ export function useVisitMedsSave() {
   return useMutation({
     mutationFn: (payload: VisitMedsSavePayload) => visitService.saveMeds(payload),
     onSuccess: (_data, variables) => {
-      // Invalidate summaries list and specific VN meds
       queryClient.invalidateQueries({ queryKey: visitKeys.all })
       queryClient.invalidateQueries({ queryKey: visitKeys.meds(variables.vn) })
+      toast.success('บันทึกยาสำเร็จ')
     },
+    onError: (err) => { toast.error('บันทึกยาไม่สำเร็จ', { description: err.message }) },
   })
 }

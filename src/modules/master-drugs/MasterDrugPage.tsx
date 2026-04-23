@@ -12,6 +12,7 @@ import {
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { ConfirmModal } from '@/components/common/ConfirmModal'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
+import { QueryError } from '@/components/common/QueryError'
 import { useDrugList, useDrugDelete } from './useMasterDrug'
 import { DrugTable } from './DrugTable'
 import { DrugForm } from './DrugForm'
@@ -40,7 +41,7 @@ export default function MasterDrugPage() {
     return f
   }, [activeFilter, searchQuery])
 
-  const { data: drugs = [], isLoading } = useDrugList(filters)
+  const { data: drugs = [], isLoading, isError, refetch } = useDrugList(filters)
   const deleteMutation = useDrugDelete()
 
   const handleEdit = (drug: MasterDrug) => {
@@ -104,6 +105,8 @@ export default function MasterDrugPage() {
         {/* Content */}
         {isLoading ? (
           <LoadingSpinner text="กำลังโหลดข้อมูล..." />
+        ) : isError ? (
+          <QueryError onRetry={() => refetch()} />
         ) : (
           <DrugTable
             data={drugs}

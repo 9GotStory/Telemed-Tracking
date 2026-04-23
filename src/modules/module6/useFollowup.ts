@@ -1,8 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { followupService } from '@/services/followupService'
 import type { FollowupFilters, FollowupFormValues } from '@/services/followupService'
 
-export const followupKeys = {
+const followupKeys = {
   all: ['followup'] as const,
   list: (filters: FollowupFilters) => [...followupKeys.all, 'list', filters] as const,
 }
@@ -22,6 +23,8 @@ export function useFollowupSave() {
     mutationFn: (data: FollowupFormValues) => followupService.save(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: followupKeys.all })
+      toast.success('บันทึกผลติดตามสำเร็จ')
     },
+    onError: (err) => { toast.error('บันทึกผลติดตามไม่สำเร็จ', { description: err.message }) },
   })
 }

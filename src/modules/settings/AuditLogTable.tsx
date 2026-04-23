@@ -1,11 +1,16 @@
 import { useAuditLogList } from './useAuditLog'
+import { QueryError } from '@/components/common/QueryError'
 import { formatBuddhist } from '@/utils/dateUtils'
 
 export function AuditLogTable() {
-  const { data: logs = [], isLoading } = useAuditLogList(200)
+  const { data: logs = [], isLoading, isError, refetch } = useAuditLogList(200)
 
   if (isLoading) {
     return <div className="text-center py-8 text-muted-foreground">กำลังโหลด...</div>
+  }
+
+  if (isError) {
+    return <QueryError onRetry={() => refetch()} />
   }
 
   if (logs.length === 0) {

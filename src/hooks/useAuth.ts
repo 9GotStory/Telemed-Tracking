@@ -6,12 +6,28 @@ import { authService } from '@/services/authService'
 import type { LoginFormValues, RegisterFormValues } from '@/services/authService'
 import type { AuthUser } from '@/types/user'
 
+/** Redirect path based on user role after login */
+function getRoleHomePath(role: string): string {
+  switch (role) {
+    case 'super_admin':
+    case 'admin_hosp':
+      return '/module3' // Schedule overview
+    case 'staff_hosp':
+      return '/module4' // Import
+    case 'staff_hsc':
+      return '/module5' // Drug confirm
+    default:
+      return '/module1' // Fallback
+  }
+}
+
 /**
  * Login mutation — calls authService.login, stores session.
- * Component handles redirect via store-driven <Navigate>.
+ * Redirects to role-appropriate home page after success.
  */
 export function useLogin() {
   const setAuth = useAuthStore((s) => s.setAuth)
+  const navigate = useNavigate()
 
   return useMutation({
     mutationFn: (credentials: LoginFormValues) => authService.login(credentials),
@@ -25,6 +41,7 @@ export function useLogin() {
         hosp_name: data.hosp_name,
       }
       setAuth(data.token, user, data.force_change)
+      navigate(getRoleHomePath(data.role), { replace: true })
     },
   })
 }

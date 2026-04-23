@@ -283,6 +283,44 @@
 
 ---
 
+## Phase 12: System Review — Fixes & Improvements
+
+**Purpose**: Address issues found during full-system review. Fix bugs, improve consistency, remove dead code, enhance UX.
+
+### Critical Fixes
+
+- [x] T137 Wire Module 1 route to EquipmentPage — In `src/router.tsx`: replace PlaceholderPage with EquipmentPage import, add RoleGuard, remove PlaceholderPage function since it's no longer used. File: `src/router.tsx:52-54`
+- [x] T138 Add toast notifications to Module 2 hooks — In `src/modules/module2/useReadiness.ts`: add `import { toast } from 'sonner'`, add `toast.success('บันทึกผลตรวจสอบสำเร็จ')` on `useReadinessSave` success, add `toast.error` on error. File: `src/modules/module2/useReadiness.ts`
+- [x] T139 Add toast notifications to Module 3 hooks — In `src/modules/module3/useSchedule.ts`: add toast.success/error on `useScheduleSave`, `useScheduleSetLink`, `useScheduleRecordIncident`. Thai messages: 'บันทึกตารางคลินิกสำเร็จ', 'บันทึกลิงก์สำเร็จ', 'บันทึกหมายเหตุสำเร็จ'. File: `src/modules/module3/useSchedule.ts`
+- [x] T140 Add toast notifications to Module 4 hooks — In `src/modules/module4/useImport.ts`: add toast.success/error on `useImportPreview` and `useImportConfirm`. Thai messages: 'ตรวจสอบข้อมูลสำเร็จ', 'นำเข้าข้อมูลสำเร็จ'. File: `src/modules/module4/useImport.ts`
+- [x] T141 Add toast notifications to Module 5 hooks — In `src/modules/module5/useDrugConfirm.ts`: add toast.success/error on `useVisitMedsSave`. Thai messages: 'บันทึกยาสำเร็จ', 'บันทึกไม่สำเร็จ'. File: `src/modules/module5/useDrugConfirm.ts`
+- [x] T142 Add toast notifications to Module 6 hooks — In `src/modules/module6/useFollowup.ts`: add toast.success/error on `useFollowupSave`. Thai message: 'บันทึกผลติดตามสำเร็จ'. File: `src/modules/module6/useFollowup.ts`
+- [x] T143 Add toast notifications to Master Drug hooks — In `src/modules/master-drugs/useMasterDrug.ts`: add toast.success/error on `useDrugSave`, `useDrugDelete`, `useDrugImport`. Thai messages: 'บันทึกยาสำเร็จ', 'ลบยาสำเร็จ', 'นำเข้ายาสำเร็จ (X รายการ)'. File: `src/modules/master-drugs/useMasterDrug.ts`
+
+### Type & Code Quality
+
+- [x] T144 Expand AuditAction union type — In `src/types/auditLog.ts`: add missing actions: 'RESET_PASSWORD' | 'CONFIRM_ALL' | 'EDIT' | 'ABSENT' | 'LOGOUT' | 'CHANGE_PASSWORD' | 'SETTING_SAVE' | 'TELEGRAM_TEST' | 'SUSPEND' | 'REJECT' | 'IMPORT_CONFIRM' | 'READINESS_SAVE' | 'SET_LINK' | 'RECORD_INCIDENT'. File: `src/types/auditLog.ts:1`
+- [x] T145 [P] Clean up uiStore toast queue — In `src/stores/uiStore.ts`: remove `toasts` array, `addToast`, and `removeToast` since sonner is used directly. Keep only `sidebarOpen`, `toggleSidebar`, `setSidebarOpen`. Verify no component imports `addToast`/`removeToast` first. Files: `src/stores/uiStore.ts`, check all imports
+- [x] T146 [P] Verify all tables have empty state — Check EquipmentTable, DrugTable, ReadinessHistory, UserTable, ScheduleGrid, PatientList, FollowupList, AuditLogTable: ensure each shows a "ไม่พบข้อมูล" message when data array is empty. Files: all Table/Grid components in `src/modules/`
+- [x] T147 [P] Add consistent RoleGuard to Module 1 and Module 5 — In `src/router.tsx`: Module 1 should allow all authenticated roles (equipment is shared). Module 5 DrugConfirm should allow staff_hsc (their own hosp_code) + staff_hosp + admin_hosp + super_admin. Verify against SPEC.md role matrix. File: `src/router.tsx`
+
+### UX Improvements
+
+- [x] T148 [P] Add post-login redirect based on role — In `src/App.tsx` or auth flow: after successful login, redirect super_admin/admin_hosp to /module3 (schedule overview), staff_hosp to /module4 (import), staff_hsc to /module5 (drug confirm). Currently lands on /module1 (placeholder). Files: `src/App.tsx`, `src/hooks/useAuth.ts`
+- [x] T149 [P] Add loading state to mutation buttons — In modules with save/delete mutations: disable buttons and show spinner text while `isPending` is true. Already done in EquipmentPage/ConfirmModal but not consistently in ScheduleForm, ReadinessChecklist, DrugConfirmationPanel, FollowupForm, DrugForm. Files: form components in `src/modules/`
+- [x] T150 [P] Add query error display to list views — When a useQuery returns `isError`, show an error card with retry button instead of empty or silently broken state. Apply to all list views: EquipmentTable, ScheduleGrid, ReadinessHistory, PatientList, FollowupList, DrugTable. Files: page components in `src/modules/`
+
+### Code Splitting
+
+- [x] T151 Lazy-load xlsx dependency — In `src/utils/excelParser.ts`: use `await import('xlsx')` dynamic import to avoid bundling SheetJS (500KB+) into the main chunk. The import is only needed on Module 4 page. Verify chunk splitting with `npm run build`. File: `src/utils/excelParser.ts`
+
+### Verification
+
+- [x] T152 Run full build and type-check — Execute `npm run build` to verify zero TypeScript errors after all Phase 12 changes
+- [x] T153 Audit toast consistency — Grep all hooks for `from 'sonner'` to verify every mutation hook has success+error toasts. No hook should silently succeed or fail
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
