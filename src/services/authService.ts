@@ -33,8 +33,21 @@ export const registerSchema = z.object({
     .regex(/^[0-9]{9,10}$/, 'เบอร์โทรต้องเป็นตัวเลข 9-10 หลัก'),
 })
 
+export const passwordChangeSchema = z.object({
+  new_password: z
+    .string()
+    .min(8, 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร'),
+  confirm_password: z
+    .string()
+    .min(8, 'กรุณายืนยันรหัสผ่าน'),
+}).refine((d) => d.new_password === d.confirm_password, {
+  message: 'รหัสผ่านไม่ตรงกัน',
+  path: ['confirm_password'],
+})
+
 export type LoginFormValues = z.infer<typeof loginSchema>
 export type RegisterFormValues = z.infer<typeof registerSchema>
+export type PasswordChangeValues = z.infer<typeof passwordChangeSchema>
 
 // ---------------------------------------------------------------------------
 // Zod response schemas — validate GAS responses before consumption
@@ -48,9 +61,14 @@ const loginResponseSchema = z.object({
   last_name: z.string(),
   role: z.enum(['super_admin', 'admin_hosp', 'staff_hosp', 'staff_hsc']),
   hosp_name: z.string(),
+  force_change: z.boolean().optional().default(false),
 })
 
 const registerResponseSchema = z.object({
+  message: z.string(),
+})
+
+const messageResponseSchema = z.object({
   message: z.string(),
 })
 
@@ -74,5 +92,11 @@ export const authService = {
   /** Logout — POST, token sent in body */
   async logout(): Promise<void> {
     await gasPost('auth.logout')
+  },
+
+  /** Change own password — POST */
+  async changePassword(data: { new_password: string }): Promise<{ message: string }> {
+    const raw = await gasPost<unknown>('auth.changePassword', data)
+    return messageResponseSchema.parse(raw)
   },
 }

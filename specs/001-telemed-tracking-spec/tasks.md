@@ -153,21 +153,21 @@
 
 **Independent Test**: Create a schedule entry for tomorrow → attach telemed link → perform readiness checklist → verify overall_status computed correctly → verify Telegram alert concept
 
-- [ ] T063 [US1] Create schedule Zod schemas in `src/services/scheduleService.ts` — ClinicScheduleSchema, ScheduleListResponseSchema per contracts/schedule.md
-- [ ] T064 [US1] Add schedule GAS actions in `src/services/scheduleService.ts` — list(filters), save(data), setLink(scheduleId, url), recordIncident(scheduleId, note) per contracts/schedule.md
-- [ ] T065 [US1] Create schedule hooks in `src/modules/module3/useSchedule.ts` — useScheduleList(filters), useScheduleSave(), useScheduleSetLink(), useScheduleRecordIncident()
-- [ ] T066 [US1] Create ScheduleForm in `src/modules/module3/ScheduleForm.tsx` — React Hook Form: service_date, clinic_type (Select from CLINIC_TYPES), hosp_code (Select from facilities), service_time, appoint_count. RoleGuard: super_admin + admin_hosp for create
-- [ ] T067 [US1] Create TelemedLinkInput in `src/modules/module3/TelemedLinkInput.tsx` — Input field for meeting URL + save button. staff_hsc sees readonly link + "เปิดลิงก์" button (opens URL). staff_hosp+ sees editable input + save per SPEC.md Module 3
-- [ ] T068 [US1] Create ScheduleGrid in `src/modules/module3/ScheduleGrid.tsx` — Weekly view: 7-column grid (Mon-Sun), rows per รพ.สต. Each cell shows clinic_type badge + time + appoint_count/actual_count. Click cell → detail dialog with TelemedLinkInput + incident note. Mobile: scrollable day-by-day list
-- [ ] T069 [US1] Create SchedulePage in `src/modules/module3/SchedulePage.tsx` — Page with header "ตารางคลินิก", week/month navigation tabs, ScheduleGrid, add schedule via ScheduleForm dialog. Filter by hosp_code, clinic_type
-- [ ] T070 [US1] Implement GAS schedule handlers in `backend/Code.gs` — schedule.list (with actual_count computed from VISIT_SUMMARY), schedule.save, schedule.setLink, schedule.recordIncident per contracts/schedule.md
-- [ ] T071 [US1] Create readiness Zod schemas in `src/services/readinessService.ts` — ReadinessLogSchema (5 boolean fields + note), ReadinessListResponseSchema per contracts/readiness.md
-- [ ] T072 [US1] Add readiness GAS actions in `src/services/readinessService.ts` — list(filters), save(data) per contracts/readiness.md
-- [ ] T073 [US1] Create readiness hooks in `src/modules/module2/useReadiness.ts` — useReadinessList(filters), useReadinessSave()
-- [ ] T074 [US1] Create ReadinessChecklist in `src/modules/module2/ReadinessChecklist.tsx` — 5 checkbox fields (cam_ok, mic_ok, pc_ok, internet_ok, software_ok), note textarea, auto-computed overall_status badge (ready/not_ready/need_fix per SPEC.md rules), save button
-- [ ] T075 [US1] Create ReadinessHistory in `src/modules/module2/ReadinessHistory.tsx` — Table of past readiness checks per hosp_code: check_date, overall_status (StatusBadge), note, checked_by. Filterable by date range
-- [ ] T076 [US1] Create ReadinessPage in `src/modules/module2/ReadinessPage.tsx` — Page with header "ตรวจสอบความพร้อม", list of รพ.สต. with clinics tomorrow (each showing status), click to open ReadinessChecklist, ReadinessHistory expandable per facility. Filter "unchecked only" toggle
-- [ ] T077 [US1] Implement GAS readiness handlers in `backend/Code.gs` — readiness.list (JOIN FACILITIES for hosp_name), readiness.save (compute overall_status, upsert by hosp_code+check_date, AUDIT_LOG) per contracts/readiness.md
+- [x] T063 [US1] Create schedule Zod schemas in `src/services/scheduleService.ts` — ClinicScheduleSchema, ScheduleListResponseSchema per contracts/schedule.md
+- [x] T064 [US1] Add schedule GAS actions in `src/services/scheduleService.ts` — list(filters), save(data), setLink(scheduleId, url), recordIncident(scheduleId, note) per contracts/schedule.md
+- [x] T065 [US1] Create schedule hooks in `src/modules/module3/useSchedule.ts` — useScheduleList(filters), useScheduleSave(), useScheduleSetLink(), useScheduleRecordIncident()
+- [x] T066 [US1] Create ScheduleForm in `src/modules/module3/ScheduleForm.tsx` — React Hook Form: service_date, clinic_type (Select from CLINIC_TYPES), hosp_code (Select from facilities), service_time, appoint_count. RoleGuard: super_admin + admin_hosp for create
+- [x] T067 [US1] Create TelemedLinkInput in `src/modules/module3/TelemedLinkInput.tsx` — Input field for meeting URL + save button. staff_hsc sees readonly link + "เปิดลิงก์" button (opens URL). staff_hosp+ sees editable input + save per SPEC.md Module 3
+- [x] T068 [US1] Create ScheduleGrid in `src/modules/module3/ScheduleGrid.tsx` — Weekly view: 7-column grid (Mon-Sun), rows per รพ.สต. Each cell shows clinic_type badge + time + appoint_count/actual_count. Click cell → detail dialog with TelemedLinkInput + incident note. Mobile: scrollable day-by-day list
+- [x] T069 [US1] Create SchedulePage in `src/modules/module3/SchedulePage.tsx` — Page with header "ตารางคลินิก", week/month navigation tabs, ScheduleGrid, add schedule via ScheduleForm dialog. Filter by hosp_code, clinic_type
+- [x] T070 [US1] Implement GAS schedule handlers in `backend/Code.gs` — schedule.list (with actual_count computed from VISIT_SUMMARY), schedule.save, schedule.setLink, schedule.recordIncident per contracts/schedule.md
+- [x] T071 [US1] Create readiness Zod schemas in `src/services/readinessService.ts` — ReadinessLogSchema (5 boolean fields + note), ReadinessListResponseSchema per contracts/readiness.md
+- [x] T072 [US1] Add readiness GAS actions in `src/services/readinessService.ts` — list(filters), save(data) per contracts/readiness.md
+- [x] T073 [US1] Create readiness hooks in `src/modules/module2/useReadiness.ts` — useReadinessList(filters), useReadinessSave()
+- [x] T074 [US1] Create ReadinessChecklist in `src/modules/module2/ReadinessChecklist.tsx` — 5 checkbox fields (cam_ok, mic_ok, pc_ok, internet_ok, software_ok), note textarea, auto-computed overall_status badge (ready/not_ready/need_fix per SPEC.md rules), save button
+- [x] T075 [US1] Create ReadinessHistory in `src/modules/module2/ReadinessHistory.tsx` — Table of past readiness checks per hosp_code: check_date, overall_status (StatusBadge), note, checked_by. Filterable by date range
+- [x] T076 [US1] Create ReadinessPage in `src/modules/module2/ReadinessPage.tsx` — Page with header "ตรวจสอบความพร้อม", list of รพ.สต. with clinics tomorrow (each showing status), click to open ReadinessChecklist, ReadinessHistory expandable per facility. Filter "unchecked only" toggle
+- [x] T077 [US1] Implement GAS readiness handlers in `backend/Code.gs` — readiness.list (JOIN FACILITIES for hosp_name), readiness.save (compute overall_status, upsert by hosp_code+check_date, AUDIT_LOG) per contracts/readiness.md
 
 **Checkpoint**: Modules 2+3 functional. Can create schedules, attach links, perform readiness checks with auto-computed status. actual_count computed in real-time. Telegram trigger logic in GAS (can test manually).
 
@@ -179,22 +179,22 @@
 
 **Independent Test**: Upload HosXP Excel → preview parsed data → confirm import → verify VISIT_SUMMARY + VISIT_MEDS created → login as staff_hsc → confirm drugs for a patient → mark another as absent
 
-- [ ] T078 [US1] Create import Zod schemas in `src/services/importService.ts` — ImportPreviewSchema, ImportConfirmSchema, VisitRowSchema (parsed Excel row) per contracts/import.md
-- [ ] T079 [US1] Add import GAS actions in `src/services/importService.ts` — preview(data), confirm(data) per contracts/import.md
-- [ ] T080 [US1] Create import hooks in `src/modules/module4/useImport.ts` — useImportPreview() (mutation), useImportConfirm() (mutation) with cache invalidation for visitSummary
-- [ ] T081 [US1] Create ExcelUploader in `src/modules/module4/ExcelUploader.tsx` — Drag-and-drop zone + file picker, accepts .xlsx only, calls excelParser.parseHosXPExport, shows parse status/errors per plan.md Module 4 UI Pattern
-- [ ] T082 [US1] Create PreviewTable in `src/modules/module4/PreviewTable.tsx` — Editable table of parsed rows grouped by VN: patient_name, dob, tel, drug_name, strength, qty, unit, sig. Inline Select for clinic_type per patient. Color-code invalid rows (VN duplicate, unknown drug). Batch-level รพ.สต./date/clinic_type selectors at top
-- [ ] T083 [US1] Create ImportSummary in `src/modules/module4/ImportSummary.tsx` — Card showing: total rows, unique VNs, valid VNs, error count, unknown drugs list. Expandable error details. Confirm button (disabled if errors exist)
-- [ ] T084 [US1] Create ImportPage in `src/modules/module4/ImportPage.tsx` — Wizard flow: Step 1 (ExcelUploader + batch selectors) → Step 2 (PreviewTable + validation) → Step 3 (ImportSummary + confirm). RoleGuard: admin_hosp+ per SPEC.md
-- [ ] T085 [US1] Implement GAS import handlers in `backend/Code.gs` — import.preview (VN uniqueness check, drug_name validation, consistent patient data), import.confirm (insert VISIT_SUMMARY + VISIT_MEDS with defaults, handle round 2 diff logic, AUDIT_LOG) per contracts/import.md
-- [ ] T086 [US1] Create visit service in `src/services/visitService.ts` — visitSummary.list(filters) and visitMeds.list(vn) functions with Zod schemas per contracts/visit-summary.md and contracts/visit-meds.md. CRITICAL: visitSummary.list response excludes tel/hn per SPEC.md security rules
-- [ ] T087 [US1] Add visitMeds.save GAS action in `src/services/visitService.ts` — save(data) with action_type confirm_all/edit/absent per contracts/visit-meds.md
-- [ ] T088 [US1] Create drug confirmation hooks in `src/modules/module5/useDrugConfirm.ts` — useVisitSummaryList(filters), useVisitMedsList(vn), useVisitMedsSave(), useMarkAbsent()
-- [ ] T089 [US1] Create DrugSourceSelector in `src/modules/module5/DrugSourceSelector.tsx` — 3-button toggle: คลัง รพ.สต. (hsc_stock), ยา รพ. (hosp_stock), รอส่งจาก รพ. (hosp_pending). Per-drug selection per SPEC.md Module 5
-- [ ] T090 [US1] Create DrugConfirmationPanel in `src/modules/module5/DrugConfirmationPanel.tsx` — Drug list per patient: drug_name, strength, qty, source (DrugSourceSelector), is_changed flag. Buttons: "ยืนยันทั้งหมด" (confirm_all), "เพิ่มยา" (add from Master Drug dropdown), "ไม่มารับบริการ" (mark absent with ConfirmModal) per SPEC.md Module 5
-- [ ] T091 [US1] Create PatientList in `src/modules/module5/PatientList.tsx` — Card-based patient list: patient_name, clinic_type badge, dispensing_confirmed status (StatusBadge: รอยืนยัน/ยืนยันแล้ว/ไม่มา). Click card → expand DrugConfirmationPanel. Filter by date, hosp_code, status. Summary bar: "ยืนยันแล้ว X / ค้าง Y / ไม่มา Z"
-- [ ] T092 [US1] Create DrugConfirmPage in `src/modules/module5/DrugConfirmPage.tsx` — Page with header "ยืนยันรายการยา", default date=today, PatientList. staff_hsc: filtered to own hosp_code. staff_hosp+: see all
-- [ ] T093 [US1] Implement GAS visit/meds handlers in `backend/Code.gs` — visitSummary.list (exclude tel/hn, role-filtered), visitMeds.list (exclude tel/hn, role-filtered), visitMeds.save (handle confirm_all/edit/absent, auto-update VISIT_SUMMARY flags, AUDIT_LOG) per contracts/visit-summary.md and contracts/visit-meds.md
+- [x] T078 [US1] Create import Zod schemas in `src/services/importService.ts` — ImportPreviewSchema, ImportConfirmSchema, VisitRowSchema (parsed Excel row) per contracts/import.md
+- [x] T079 [US1] Add import GAS actions in `src/services/importService.ts` — preview(data), confirm(data) per contracts/import.md
+- [x] T080 [US1] Create import hooks in `src/modules/module4/useImport.ts` — useImportPreview() (mutation), useImportConfirm() (mutation) with cache invalidation for visitSummary
+- [x] T081 [US1] Create ExcelUploader in `src/modules/module4/ExcelUploader.tsx` — Drag-and-drop zone + file picker, accepts .xlsx only, calls excelParser.parseHosXPExport, shows parse status/errors per plan.md Module 4 UI Pattern
+- [x] T082 [US1] Create PreviewTable in `src/modules/module4/PreviewTable.tsx` — Editable table of parsed rows grouped by VN: patient_name, dob, tel, drug_name, strength, qty, unit, sig. Inline Select for clinic_type per patient. Color-code invalid rows (VN duplicate, unknown drug). Batch-level รพ.สต./date/clinic_type selectors at top
+- [x] T083 [US1] Create ImportSummary in `src/modules/module4/ImportSummary.tsx` — Card showing: total rows, unique VNs, valid VNs, error count, unknown drugs list. Expandable error details. Confirm button (disabled if errors exist)
+- [x] T084 [US1] Create ImportPage in `src/modules/module4/ImportPage.tsx` — Wizard flow: Step 1 (ExcelUploader + batch selectors) → Step 2 (PreviewTable + validation) → Step 3 (ImportSummary + confirm). RoleGuard: admin_hosp+ per SPEC.md
+- [x] T085 [US1] Implement GAS import handlers in `backend/Code.gs` — import.preview (VN uniqueness check, drug_name validation, consistent patient data), import.confirm (insert VISIT_SUMMARY + VISIT_MEDS with defaults, handle round 2 diff logic, AUDIT_LOG) per contracts/import.md
+- [x] T086 [US1] Create visit service in `src/services/visitService.ts` — visitSummary.list(filters) and visitMeds.list(vn) functions with Zod schemas per contracts/visit-summary.md and contracts/visit-meds.md. CRITICAL: visitSummary.list response excludes tel/hn per SPEC.md security rules
+- [x] T087 [US1] Add visitMeds.save GAS action in `src/services/visitService.ts` — save(data) with action_type confirm_all/edit/absent per contracts/visit-meds.md
+- [x] T088 [US1] Create drug confirmation hooks in `src/modules/module5/useDrugConfirm.ts` — useVisitSummaryList(filters), useVisitMedsList(vn), useVisitMedsSave(), useMarkAbsent()
+- [x] T089 [US1] Create DrugSourceSelector in `src/modules/module5/DrugSourceSelector.tsx` — 3-button toggle: คลัง รพ.สต. (hsc_stock), ยา รพ. (hosp_stock), รอส่งจาก รพ. (hosp_pending). Per-drug selection per SPEC.md Module 5
+- [x] T090 [US1] Create DrugConfirmationPanel in `src/modules/module5/DrugConfirmationPanel.tsx` — Drug list per patient: drug_name, strength, qty, source (DrugSourceSelector), is_changed flag. Buttons: "ยืนยันทั้งหมด" (confirm_all), "เพิ่มยา" (add from Master Drug dropdown), "ไม่มารับบริการ" (mark absent with ConfirmModal) per SPEC.md Module 5
+- [x] T091 [US1] Create PatientList in `src/modules/module5/PatientList.tsx` — Card-based patient list: patient_name, clinic_type badge, dispensing_confirmed status (StatusBadge: รอยืนยัน/ยืนยันแล้ว/ไม่มา). Click card → expand DrugConfirmationPanel. Filter by date, hosp_code, status. Summary bar: "ยืนยันแล้ว X / ค้าง Y / ไม่มา Z"
+- [x] T092 [US1] Create DrugConfirmPage in `src/modules/module5/DrugConfirmPage.tsx` — Page with header "ยืนยันรายการยา", default date=today, PatientList. staff_hsc: filtered to own hosp_code. staff_hosp+: see all
+- [x] T093 [US1] Implement GAS visit/meds handlers in `backend/Code.gs` — visitSummary.list (exclude tel/hn, role-filtered), visitMeds.list (exclude tel/hn, role-filtered), visitMeds.save (handle confirm_all/edit/absent, auto-update VISIT_SUMMARY flags, AUDIT_LOG) per contracts/visit-summary.md and contracts/visit-meds.md
 
 **Checkpoint**: Modules 4+5 functional. Can import Excel with preview/validation, drugs appear in Module 5, staff_hsc can confirm/mark absent, admin can edit drugs. Sensitive fields (tel/hn) excluded from API responses.
 
@@ -206,14 +206,14 @@
 
 **Independent Test**: After drug confirmation → open Module 6 → see pending follow-up cases → record follow-up for one case → verify "ติดตามแล้ว" badge → add second follow-up to same case
 
-- [ ] T094 [US1] Create followup Zod schemas in `src/services/followupService.ts` — FollowupSaveSchema (followup_date, general_condition, side_effect, drug_adherence, other_note), FollowupListResponseSchema per contracts/followup.md. CRITICAL: Response includes tel and hn (Module 6 only)
-- [ ] T095 [US1] Add followup GAS actions in `src/services/followupService.ts` — list(filters), save(data) per contracts/followup.md
-- [ ] T096 [US1] Create followup hooks in `src/modules/module6/useFollowup.ts` — useFollowupList(filters), useFollowupSave()
-- [ ] T097 [US1] Create PatientContactCard in `src/modules/module6/PatientContactCard.tsx` — Patient name, tel (clickable `tel:` link for mobile), hosp_name, clinic_type, service_date. Drug list with is_changed=Y highlighted (Apple Blue text) and drug_source_pending=Y flagged (warning icon)
-- [ ] T098 [US1] Create FollowupForm in `src/modules/module6/FollowupForm.tsx` — React Hook Form: followup_date (date picker), general_condition (textarea), side_effect (textarea), drug_adherence (textarea), other_note (textarea) per SPEC.md Module 6
-- [ ] T099 [US1] Create FollowupList in `src/modules/module6/FollowupList.tsx` — List of visits with dispensing_confirmed=Y: patient name, hosp_name, clinic_type, followup_status badge (รอติดตาม/ติดตามแล้ว). Click → expand PatientContactCard + FollowupForm + follow-up history timeline. Filter by status, hosp_code, date
-- [ ] T100 [US1] Create FollowupPage in `src/modules/module6/FollowupPage.tsx` — Page with header "ติดตาม Case", FollowupList, RoleGuard: super_admin + admin_hosp only per SPEC.md Module 6
-- [ ] T101 [US1] Implement GAS followup handlers in `backend/Code.gs` — followup.list (LEFT JOIN FOLLOWUP on VISIT_SUMMARY, include tel/hn, compute followup_status: pending/followed, include VISIT_MEDS), followup.save (insert new record, AUDIT_LOG) per contracts/followup.md
+- [x] T094 [US1] Create followup Zod schemas in `src/services/followupService.ts` — FollowupSaveSchema (followup_date, general_condition, side_effect, drug_adherence, other_note), FollowupListResponseSchema per contracts/followup.md. CRITICAL: Response includes tel and hn (Module 6 only)
+- [x] T095 [US1] Add followup GAS actions in `src/services/followupService.ts` — list(filters), save(data) per contracts/followup.md
+- [x] T096 [US1] Create followup hooks in `src/modules/module6/useFollowup.ts` — useFollowupList(filters), useFollowupSave()
+- [x] T097 [US1] Create PatientContactCard in `src/modules/module6/PatientContactCard.tsx` — Patient name, tel (clickable `tel:` link for mobile), hosp_name, clinic_type, service_date. Drug list with is_changed=Y highlighted (Apple Blue text) and drug_source_pending=Y flagged (warning icon)
+- [x] T098 [US1] Create FollowupForm in `src/modules/module6/FollowupForm.tsx` — React Hook Form: followup_date (date picker), general_condition (textarea), side_effect (textarea), drug_adherence (textarea), other_note (textarea) per SPEC.md Module 6
+- [x] T099 [US1] Create FollowupList in `src/modules/module6/FollowupList.tsx` — List of visits with dispensing_confirmed=Y: patient name, hosp_name, clinic_type, followup_status badge (รอติดตาม/ติดตามแล้ว). Click → expand PatientContactCard + FollowupForm + follow-up history timeline. Filter by status, hosp_code, date
+- [x] T100 [US1] Create FollowupPage in `src/modules/module6/FollowupPage.tsx` — Page with header "ติดตาม Case", FollowupList, RoleGuard: super_admin + admin_hosp only per SPEC.md Module 6
+- [x] T101 [US1] Implement GAS followup handlers in `backend/Code.gs` — followup.list (LEFT JOIN FOLLOWUP on VISIT_SUMMARY, include tel/hn, compute followup_status: pending/followed, include VISIT_MEDS), followup.save (insert new record, AUDIT_LOG) per contracts/followup.md
 
 **Checkpoint**: Module 6 functional. Can see pending follow-ups with full patient data (tel/HN), record follow-up notes, view history. Multiple follow-ups per visit work. MVP (US1) is now COMPLETE — full daily workflow operational.
 
@@ -225,16 +225,16 @@
 
 **Independent Test**: Open /dashboard without login → see equipment status, upcoming appointments, attendance rates, follow-up pipeline → verify NO patient names/phone/VN/HN visible
 
-- [ ] T102 [US5] Create dashboard Zod schemas in `src/services/dashboardService.ts` — DashboardStatsSchema with nested arrays for equipment_status, upcoming_appointments, attendance_by_clinic, attendance_by_facility, followup_pipeline per contracts/dashboard.md
-- [ ] T103 [US5] Add dashboard GAS action in `src/services/dashboardService.ts` — getStats() calling gasGet('dashboard.stats') with Zod validation per contracts/dashboard.md
-- [ ] T104 [US5] Create dashboard hooks in `src/modules/dashboard/useDashboard.ts` — useDashboardStats() with useQuery, no token needed (public endpoint)
-- [ ] T105 [US5] Create StatsCards in `src/modules/dashboard/StatsCards.tsx` — Row of summary cards: total sessions this month, attendance rate %, follow-up completion %, equipment readiness %. Apple-style cards: no borders, 8px radius, subtle shadow per DESIGN.md
-- [ ] T106 [US5] Create EquipmentStatusGrid in `src/modules/dashboard/EquipmentStatusGrid.tsx` — Grid of รพ.สต. cards: hosp_name, status (StatusBadge), last check date. Alternating #f5f5f7 backgrounds
-- [ ] T107 [US5] Create UpcomingAppointments in `src/modules/dashboard/UpcomingAppointments.tsx` — Table: date, hosp_name, clinic_type, time, appoint_count for next 7 days
-- [ ] T108 [US5] Create AttendanceChart in `src/modules/dashboard/AttendanceChart.tsx` — Two views: by clinic_type and by รพ.สต. Show appoint_count vs attended count, percentage rates
-- [ ] T109 [US5] Create FollowupPipeline in `src/modules/dashboard/FollowupPipeline.tsx` — Two number cards: "ติดตามแล้ว X" and "รอติดตาม Y" — aggregate counts only, no patient details
-- [ ] T110 [US5] Create DashboardPage in `src/modules/dashboard/DashboardPage.tsx` — Full-width layout (no sidebar, no auth required), hero section with system name on dark bg, then StatsCards, EquipmentStatusGrid, UpcomingAppointments, AttendanceChart, FollowupPipeline sections alternating backgrounds per DESIGN.md. Route: /dashboard (from VITE_DASHBOARD_PATH)
-- [ ] T111 [US5] Implement GAS dashboard handler in `backend/Code.gs` — dashboard.stats (aggregate from EQUIPMENT, READINESS_LOG, CLINIC_SCHEDULE, VISIT_SUMMARY, FOLLOWUP; strip ALL sensitive fields; no token required) per contracts/dashboard.md
+- [x] T102 [US5] Create dashboard Zod schemas in `src/services/dashboardService.ts` — DashboardStatsSchema with nested arrays for equipment_status, upcoming_appointments, attendance_by_clinic, attendance_by_facility, followup_pipeline per contracts/dashboard.md
+- [x] T103 [US5] Add dashboard GAS action in `src/services/dashboardService.ts` — getStats() calling gasGet('dashboard.stats') with Zod validation per contracts/dashboard.md
+- [x] T104 [US5] Create dashboard hooks in `src/modules/dashboard/useDashboard.ts` — useDashboardStats() with useQuery, no token needed (public endpoint)
+- [x] T105 [US5] Create StatsCards in `src/modules/dashboard/StatsCards.tsx` — Row of summary cards: total sessions this month, attendance rate %, follow-up completion %, equipment readiness %. Apple-style cards: no borders, 8px radius, subtle shadow per DESIGN.md
+- [x] T106 [US5] Create EquipmentStatusGrid in `src/modules/dashboard/EquipmentStatusGrid.tsx` — Grid of รพ.สต. cards: hosp_name, status (StatusBadge), last check date. Alternating #f5f5f7 backgrounds
+- [x] T107 [US5] Create UpcomingAppointments in `src/modules/dashboard/UpcomingAppointments.tsx` — Table: date, hosp_name, clinic_type, time, appoint_count for next 7 days
+- [x] T108 [US5] Create AttendanceChart in `src/modules/dashboard/AttendanceChart.tsx` — Two views: by clinic_type and by รพ.สต. Show appoint_count vs attended count, percentage rates
+- [x] T109 [US5] Create FollowupPipeline in `src/modules/dashboard/FollowupPipeline.tsx` — Two number cards: "ติดตามแล้ว X" and "รอติดตาม Y" — aggregate counts only, no patient details
+- [x] T110 [US5] Create DashboardPage in `src/modules/dashboard/DashboardPage.tsx` — Full-width layout (no sidebar, no auth required), hero section with system name on dark bg, then StatsCards, EquipmentStatusGrid, UpcomingAppointments, AttendanceChart, FollowupPipeline sections alternating backgrounds per DESIGN.md. Route: /dashboard (from VITE_DASHBOARD_PATH)
+- [x] T111 [US5] Implement GAS dashboard handler in `backend/Code.gs` — dashboard.stats (aggregate from EQUIPMENT, READINESS_LOG, CLINIC_SCHEDULE, VISIT_SUMMARY, FOLLOWUP; strip ALL sensitive fields; no token required) per contracts/dashboard.md
 
 **Checkpoint**: Public dashboard accessible at /dashboard without login. All aggregate statistics display correctly. Zero patient-identifiable data in API response or UI.
 
@@ -246,21 +246,21 @@
 
 **Independent Test**: Register new user → login as super_admin → approve user → change role → test Telegram send button → view audit log entries for all actions
 
-- [ ] T112 [US6] Create users Zod schemas in `src/services/usersService.ts` — UserListResponseSchema, UserApproveSchema, UserUpdateSchema, PasswordResetSchema per contracts/users.md
-- [ ] T113 [US6] Add users GAS actions in `src/services/usersService.ts` — list(filters), approve(data), update(data), resetPassword(data) per contracts/users.md
-- [ ] T114 [US6] Create users hooks in `src/modules/users/useUsers.ts` — useUsersList(filters), useUserApprove(), useUserUpdate(), usePasswordReset()
-- [ ] T115 [US6] Create RoleSelector in `src/modules/users/RoleSelector.tsx` — Dropdown with available roles based on caller's permission level. admin_hosp sees staff_hosp + staff_hsc only. super_admin sees all
-- [ ] T116 [US6] Create ApprovalForm in `src/modules/users/ApprovalForm.tsx` — Dialog: show user details (hosp_code, name, tel), RoleSelector, approve/reject buttons. On approve → call useUserApprove with selected role
-- [ ] T117 [US6] Create UserTable in `src/modules/users/UserTable.tsx` — DataTable: hosp_code, name, tel, role (StatusBadge), status (StatusBadge), created_at, actions (approve/edit role/reset password/suspend). Filter by status (pending/active/inactive), role, hosp_code
-- [ ] T118 [US6] Create UsersPage in `src/modules/users/UsersPage.tsx` — Page with header "จัดการผู้ใช้", pending users count badge, UserTable, ApprovalForm dialog. RoleGuard: super_admin (all users), admin_hosp (staff_hosp + staff_hsc only)
-- [ ] T119 [US6] Create settings Zod schemas in `src/services/settingsService.ts` — SettingsSchema, TelegramTestSchema per contracts/settings.md
-- [ ] T120 [US6] Add settings GAS actions in `src/services/settingsService.ts` — get(), save(data) per contracts/settings.md
-- [ ] T121 [US6] Create settings hooks in `src/modules/settings/useSettings.ts` — useSettingsGet(), useSettingsSave()
-- [ ] T122 [US6] Create TelegramSettings in `src/modules/settings/TelegramSettings.tsx` — Form: bot_token, chat_id, alert_time, system_name, telegram_active toggle, app_url. "ทดสอบส่ง" button calling settings.save with telegram_test=true. Per DESIGN.md Forms spec
-- [ ] T123 [US6] Create SettingsPage in `src/modules/settings/SettingsPage.tsx` — Page with header "ตั้งค่าระบบ", TelegramSettings card. RoleGuard: super_admin only per SPEC.md
-- [ ] T124 [US6] Implement GAS users handlers in `backend/Code.gs` — users.list (role-filtered), users.approve (validate role permissions, set status=active), users.update (validate permissions, clear session on suspend), users.resetPassword (hash new password, clear session) per contracts/users.md
-- [ ] T125 [US6] Implement GAS settings handlers in `backend/Code.gs` — settings.get (read SETTINGS sheet), settings.save (update key-value pairs, handle telegram_test by calling Telegram Bot API sendMessage), AUDIT_LOG per contracts/settings.md
-- [ ] T126 [US6] Implement GAS Telegram trigger in `backend/Code.gs` — dailyTrigger() function: check SETTINGS.telegram_active, query CLINIC_SCHEDULE for tomorrow's clinics, JOIN FACILITIES + EQUIPMENT for status, format message per SPEC.md Section 7, send via UrlFetchApp to Telegram Bot API. Set up GAS time-driven trigger for 07:00 daily
+- [x] T112 [US6] Create users Zod schemas in `src/services/usersService.ts` — UserListResponseSchema, UserApproveSchema, UserUpdateSchema, PasswordResetSchema per contracts/users.md
+- [x] T113 [US6] Add users GAS actions in `src/services/usersService.ts` — list(filters), approve(data), update(data), resetPassword(data) per contracts/users.md
+- [x] T114 [US6] Create users hooks in `src/modules/users/useUsers.ts` — useUsersList(filters), useUserApprove(), useUserUpdate(), usePasswordReset()
+- [x] T115 [US6] Create RoleSelector in `src/modules/users/RoleSelector.tsx` — Dropdown with available roles based on caller's permission level. admin_hosp sees staff_hosp + staff_hsc only. super_admin sees all
+- [x] T116 [US6] Create ApprovalForm in `src/modules/users/ApprovalForm.tsx` — Dialog: show user details (hosp_code, name, tel), RoleSelector, approve/reject buttons. On approve → call useUserApprove with selected role
+- [x] T117 [US6] Create UserTable in `src/modules/users/UserTable.tsx` — DataTable: hosp_code, name, tel, role (StatusBadge), status (StatusBadge), created_at, actions (approve/edit role/reset password/suspend). Filter by status (pending/active/inactive), role, hosp_code
+- [x] T118 [US6] Create UsersPage in `src/modules/users/UsersPage.tsx` — Page with header "จัดการผู้ใช้", pending users count badge, UserTable, ApprovalForm dialog. RoleGuard: super_admin (all users), admin_hosp (staff_hosp + staff_hsc only)
+- [x] T119 [US6] Create settings Zod schemas in `src/services/settingsService.ts` — SettingsSchema, TelegramTestSchema per contracts/settings.md
+- [x] T120 [US6] Add settings GAS actions in `src/services/settingsService.ts` — get(), save(data) per contracts/settings.md
+- [x] T121 [US6] Create settings hooks in `src/modules/settings/useSettings.ts` — useSettingsGet(), useSettingsSave()
+- [x] T122 [US6] Create TelegramSettings in `src/modules/settings/TelegramSettings.tsx` — Form: bot_token, chat_id, alert_time, system_name, telegram_active toggle, app_url. "ทดสอบส่ง" button calling settings.save with telegram_test=true. Per DESIGN.md Forms spec
+- [x] T123 [US6] Create SettingsPage in `src/modules/settings/SettingsPage.tsx` — Page with header "ตั้งค่าระบบ", TelegramSettings card. RoleGuard: super_admin only per SPEC.md
+- [x] T124 [US6] Implement GAS users handlers in `backend/Code.gs` — users.list (role-filtered), users.approve (validate role permissions, set status=active), users.update (validate permissions, clear session on suspend), users.resetPassword (hash new password, clear session) per contracts/users.md
+- [x] T125 [US6] Implement GAS settings handlers in `backend/Code.gs` — settings.get (read SETTINGS sheet), settings.save (update key-value pairs, handle telegram_test by calling Telegram Bot API sendMessage), AUDIT_LOG per contracts/settings.md
+- [x] T126 [US6] Implement GAS Telegram trigger in `backend/Code.gs` — dailyTrigger() function: check SETTINGS.telegram_active, query CLINIC_SCHEDULE for tomorrow's clinics, JOIN FACILITIES + EQUIPMENT for status, format message per SPEC.md Section 7, send via UrlFetchApp to Telegram Bot API. Set up GAS time-driven trigger for 07:00 daily
 
 **Checkpoint**: Users can be approved/role-changed/suspended. Telegram settings configurable with test send. Daily trigger sends reminders. Audit log records all admin actions.
 
@@ -270,16 +270,16 @@
 
 **Purpose**: Final quality improvements across all modules
 
-- [ ] T127 Add unauthorized response interceptor — In services/api.ts: detect "Unauthorized" error from any GAS call, call authStore.clearAuth(), redirect to /login automatically per SPEC.md Section 8
-- [ ] T128 [P] Add password change on first login — In LoginPage or App: detect flag from GAS (if user was password-reset), show password change dialog before allowing access per spec.md clarification
-- [ ] T129 [P] Implement audit log viewer — Add audit log display in SettingsPage (super_admin): DataTable of AUDIT_LOG entries with user, action, module, target, timestamp, old/new values per SCHEMA.md
+- [x] T127 Add unauthorized response interceptor — In services/api.ts: detect "Unauthorized" error from any GAS call, call authStore.clearAuth(), redirect to /login automatically per SPEC.md Section 8
+- [x] T128 [P] Add password change on first login — In LoginPage or App: detect flag from GAS (if user was password-reset), show password change dialog before allowing access per spec.md clarification
+- [x] T129 [P] Implement audit log viewer — Add audit log display in SettingsPage (super_admin): DataTable of AUDIT_LOG entries with user, action, module, target, timestamp, old/new values per SCHEMA.md
 - [ ] T130 [P] Add responsive testing and mobile polish — Test all modules at <640px, 640-1024px, >1024px breakpoints. Ensure touch targets ≥44px, cards stack on mobile, sidebar collapses properly per DESIGN.md Section 8
-- [ ] T131 [P] Add error boundaries — React ErrorBoundary wrapper around each module route. Show user-friendly error card with retry button per SPEC.md edge case "backend unreachable"
-- [ ] T132 [P] Add toast notifications on save/delete success — Wire up uiStore toast queue with shadcn Toaster. Show success/error toasts after mutations across all modules
-- [ ] T133 Verify all GAS CORS compliance — Audit every fetch call in services/ to confirm: GET has no headers and token in query params, POST has no Content-Type header and token in body per Constitution Principle I
-- [ ] T134 Verify all Zod schema validation — Audit every service function to confirm GAS responses are parsed through Zod before use per Constitution Principle II
-- [ ] T135 Run full type-check with `npm run build` — Ensure zero TypeScript errors in strict mode across all files
-- [ ] T136 Seed Google Sheets with initial data — HOSPITAL (16 facilities), FACILITIES (15 รพ.สต.), SETTINGS (default key-values), MASTER_DRUGS (initial drug list) per SCHEMA.md sample data
+- [x] T131 [P] Add error boundaries — React ErrorBoundary wrapper around each module route. Show user-friendly error card with retry button per SPEC.md edge case "backend unreachable"
+- [x] T132 [P] Add toast notifications on save/delete success — Wire up uiStore toast queue with shadcn Toaster. Show success/error toasts after mutations across all modules
+- [x] T133 Verify all GAS CORS compliance — Audit every fetch call in services/ to confirm: GET has no headers and token in query params, POST has no Content-Type header and token in body per Constitution Principle I
+- [x] T134 Verify all Zod schema validation — Audit every service function to confirm GAS responses are parsed through Zod before use per Constitution Principle II
+- [x] T135 Run full type-check with `npm run build` — Ensure zero TypeScript errors in strict mode across all files
+- [x] T136 Seed Google Sheets with initial data — HOSPITAL (16 facilities), FACILITIES (15 รพ.สต.), SETTINGS (default key-values), MASTER_DRUGS (initial drug list) per SCHEMA.md sample data
 
 ---
 

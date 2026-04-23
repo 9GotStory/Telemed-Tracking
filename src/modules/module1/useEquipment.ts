@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { equipmentService, type EquipmentFilters } from '@/services/equipmentService'
 import type { EquipmentFormValues } from '@/services/equipmentService'
 
@@ -29,6 +30,10 @@ export function useEquipmentSave() {
     mutationFn: (data: EquipmentFormValues) => equipmentService.save(data),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: equipmentKeys.all })
+      toast.success('บันทึกอุปกรณ์สำเร็จ')
+    },
+    onError: (err) => {
+      toast.error('บันทึกไม่สำเร็จ', { description: err.message })
     },
   })
 }
@@ -43,6 +48,10 @@ export function useEquipmentDelete() {
     mutationFn: (equipId: string) => equipmentService.delete(equipId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: equipmentKeys.all })
+      toast.success('ลบอุปกรณ์สำเร็จ')
+    },
+    onError: (err) => {
+      toast.error('ลบไม่สำเร็จ', { description: err.message })
     },
   })
 }

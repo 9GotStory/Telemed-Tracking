@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/authStore'
 import { authService } from '@/services/authService'
 import type { LoginFormValues, RegisterFormValues } from '@/services/authService'
@@ -23,7 +24,7 @@ export function useLogin() {
         role: data.role,
         hosp_name: data.hosp_name,
       }
-      setAuth(data.token, user)
+      setAuth(data.token, user, data.force_change)
     },
   })
 }
@@ -50,6 +51,7 @@ export function useLogout() {
     mutationFn: () => authService.logout(),
     onSettled: () => {
       clearAuth()
+      toast.success('ออกจากระบบสำเร็จ')
       navigate('/login', { replace: true })
     },
   })

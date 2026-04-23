@@ -15,5 +15,5 @@ export interface ClinicSchedule {
 
 export interface ClinicScheduleWithActual extends ClinicSchedule {
   actual_count: number // computed by GAS from VISIT_SUMMARY
-  hosp_name?: string
+  hosp_name: string
 }

@@ -1,6 +1,8 @@
 import { RouterProvider } from 'react-router-dom'
 import { router } from '@/router'
 import { useAuthStore } from '@/stores/authStore'
+import { Toaster } from '@/components/ui/sonner'
+import { PasswordChangeDialog } from '@/modules/auth/PasswordChangeDialog'
 import { useEffect } from 'react'
 
 function AuthHydrator() {
@@ -18,6 +20,8 @@ function App() {
     <>
       <AuthHydrator />
       <RouterProvider router={router} />
+      <PasswordChangeDialog />
+      <Toaster position="top-right" richColors closeButton />
     </>
   )
 }

@@ -3,11 +3,20 @@ import { AppLayout } from '@/components/layout/AppLayout'
 import { PublicLayout } from '@/components/layout/PublicLayout'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { RoleGuard } from '@/components/common/RoleGuard'
+import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 
-// Lazy-loaded module pages
+// Module pages
 import LoginPage from '@/modules/auth/LoginPage'
 import RegisterPage from '@/modules/auth/RegisterPage'
+import DashboardPage from '@/modules/dashboard/DashboardPage'
 import MasterDrugPage from '@/modules/master-drugs/MasterDrugPage'
+import SchedulePage from '@/modules/module3/SchedulePage'
+import ReadinessPage from '@/modules/module2/ReadinessPage'
+import ImportPage from '@/modules/module4/ImportPage'
+import DrugConfirmPage from '@/modules/module5/DrugConfirmPage'
+import FollowupPage from '@/modules/module6/FollowupPage'
+import UsersPage from '@/modules/users/UsersPage'
+import SettingsPage from '@/modules/settings/SettingsPage'
 
 // Placeholder pages for modules not yet implemented
 function PlaceholderPage({ title }: { title: string }) {
@@ -32,7 +41,7 @@ export const router = createBrowserRouter([
   // Dashboard (public, no sidebar)
   {
     path: '/dashboard',
-    element: <PlaceholderPage title="Dashboard" />,
+    element: <DashboardPage />,
   },
 
   // Protected routes (auth required, with sidebar layout)
@@ -41,62 +50,74 @@ export const router = createBrowserRouter([
     children: [
       {
         path: '/module1',
-        element: <PlaceholderPage title="ทะเบียนอุปกรณ์" />,
+        element: <ErrorBoundary><PlaceholderPage title="ทะเบียนอุปกรณ์" /></ErrorBoundary>,
       },
       {
         path: '/module2',
         element: (
-          <RoleGuard allowedRoles={['super_admin', 'admin_hosp']}>
-            <PlaceholderPage title="ตรวจสอบความพร้อม" />
-          </RoleGuard>
+          <ErrorBoundary>
+            <RoleGuard allowedRoles={['super_admin', 'admin_hosp']}>
+              <ReadinessPage />
+            </RoleGuard>
+          </ErrorBoundary>
         ),
       },
       {
         path: '/module3',
-        element: <PlaceholderPage title="ตารางคลินิก" />,
+        element: <ErrorBoundary><SchedulePage /></ErrorBoundary>,
       },
       {
         path: '/module4',
         element: (
-          <RoleGuard allowedRoles={['super_admin', 'admin_hosp', 'staff_hosp']}>
-            <PlaceholderPage title="Import ข้อมูลผู้ป่วย" />
-          </RoleGuard>
+          <ErrorBoundary>
+            <RoleGuard allowedRoles={['super_admin', 'admin_hosp', 'staff_hosp']}>
+              <ImportPage />
+            </RoleGuard>
+          </ErrorBoundary>
         ),
       },
       {
         path: '/module5',
-        element: <PlaceholderPage title="ยืนยันรายการยา" />,
+        element: <ErrorBoundary><DrugConfirmPage /></ErrorBoundary>,
       },
       {
         path: '/module6',
         element: (
-          <RoleGuard allowedRoles={['super_admin', 'admin_hosp']}>
-            <PlaceholderPage title="ติดตาม Case" />
-          </RoleGuard>
+          <ErrorBoundary>
+            <RoleGuard allowedRoles={['super_admin', 'admin_hosp']}>
+              <FollowupPage />
+            </RoleGuard>
+          </ErrorBoundary>
         ),
       },
       {
         path: '/master-drugs',
         element: (
-          <RoleGuard allowedRoles={['super_admin', 'admin_hosp']}>
-            <MasterDrugPage />
-          </RoleGuard>
+          <ErrorBoundary>
+            <RoleGuard allowedRoles={['super_admin', 'admin_hosp']}>
+              <MasterDrugPage />
+            </RoleGuard>
+          </ErrorBoundary>
         ),
       },
       {
         path: '/users',
         element: (
-          <RoleGuard allowedRoles={['super_admin', 'admin_hosp']}>
-            <PlaceholderPage title="จัดการผู้ใช้" />
-          </RoleGuard>
+          <ErrorBoundary>
+            <RoleGuard allowedRoles={['super_admin', 'admin_hosp']}>
+              <UsersPage />
+            </RoleGuard>
+          </ErrorBoundary>
         ),
       },
       {
         path: '/settings',
         element: (
-          <RoleGuard allowedRoles={['super_admin']}>
-            <PlaceholderPage title="ตั้งค่าระบบ" />
-          </RoleGuard>
+          <ErrorBoundary>
+            <RoleGuard allowedRoles={['super_admin']}>
+              <SettingsPage />
+            </RoleGuard>
+          </ErrorBoundary>
         ),
       },
     ],

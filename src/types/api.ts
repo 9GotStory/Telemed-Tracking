@@ -16,6 +16,7 @@ export interface LoginResponse {
   last_name: string
   role: UserRole
   hosp_name: string
+  force_change?: boolean
 }
 
 /** Register response from GAS */
