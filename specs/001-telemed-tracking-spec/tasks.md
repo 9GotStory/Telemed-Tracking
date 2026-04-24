@@ -360,6 +360,32 @@
 
 ---
 
+## Phase 14: Frontend Design Review — Fixes & Polish
+
+**Source**: Frontend design audit (2026-04-24)
+**Depends on**: Phase 13 (backend fixes complete)
+**Files**: All `src/` frontend files
+
+### Critical: File & Type Fixes
+
+- [x] T170 Fix `SettingsPage.ts.json` → `SettingsPage.tsx` — **Non-issue**: File already exists as `SettingsPage.tsx` with valid React component. No `.ts.json` file found in codebase.
+- [x] T171 Deduplicate type definitions — **Non-issue**: `constants/roles.ts` already correctly imports `UserRole` from `@/types/user` with no duplicate type definitions. Only contains role constants as intended.
+
+### Moderate: Architecture Improvements
+
+- [x] T172 Create `useFacilitiesList()` hook — Added `facilities.list` GAS action to Code.gs (`handleFacilitiesList`), created `src/services/facilityService.ts` with Zod validation, created `src/hooks/useFacilities.ts` with dedicated query key. Updated DrugConfirmPage, ImportPage, FollowupPage to use `useFacilitiesList()` instead of deriving from equipment data.
+- [x] T173 Fix Dashboard navigation inconsistency — Used option (b): Dashboard sidebar link now opens in new tab (`target="_blank"`) with ExternalLink icon indicator. Added `external` flag to NavItem type. Public `/dashboard` route preserved for unauthenticated access.
+- [x] T174 Add pagination to `DataTable` — Added `pageSize` prop (default 20), page state, and pagination footer with page number buttons, prev/next controls, and row count display. Pagination auto-resets on sort change and handles data shrink.
+- [x] T175 Fix UsersPage loading state — Replaced plain text `กำลังโหลด...` with `<LoadingSpinner text="กำลังโหลดข้อมูล..." />` for consistency.
+
+### Low: Polish
+
+- [x] T176 Improve RoleGuard "access denied" UI — Replaced plain text with centered card containing ShieldX icon, title, description, and "กลับหน้าหลัก" button that navigates to `/module1`. Extracted into separate `AccessDenied` component.
+- [x] T177 Replace hardcoded hex colors in Dashboard — Replaced `bg-[#1d1d1f]` → `bg-near-black`, `text-[#1d1d1f]` → `text-near-black`, `text-[rgba(0,0,0,0.48)]` → `text-muted-foreground`, `text-[rgba(255,255,255,0.7)]` → `text-white/70`. Card box-shadow rgba values left as-is (no design token exists).
+- [x] T178 Configure TanStack Query defaults — **Non-issue**: `src/main.tsx` already has `QueryClient` with `staleTime: 30000`, `retry: 1`, `refetchOnWindowFocus: true`. Exactly matches requested configuration.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -376,6 +402,7 @@
 - **Phase 10 (US6 Settings+Users)**: Depends on Phase 3 — independently testable
 - **Phase 11 (Polish)**: After all desired phases complete
 - **Phase 13 (Backend Fixes)**: Depends on Phase 12 — bug fixes + performance for Code.gs
+- **Phase 14 (Frontend Fixes)**: Depends on Phase 13 — frontend design review fixes + polish
 
 ### User Story Dependencies
 
@@ -456,10 +483,11 @@ Phase 10: T112-T126  (Users + Settings)
 4. + Phase 9 (Dashboard) → Public monitoring
 5. + Phase 10 (Settings+Users) → Admin management
 6. + Phase 11 (Polish) → Production-ready
+7. + Phase 14 (Frontend Fixes) → Design review fixes
 
 ### Estimated Scope
 
-- **Total tasks**: 153 (Phase 1-12: 136 + Phase 13: 16 + T130 still open)
+- **Total tasks**: 162 (Phase 1-12: 136 + Phase 13: 16 + Phase 14: 9 + T130 still open)
 - **MVP tasks** (Phases 1-3 + 5-8): ~101 tasks
 - **Post-MVP tasks** (Phases 4, 9-11): ~35 tasks
 - **Per user story**:

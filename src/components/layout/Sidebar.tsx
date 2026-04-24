@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
   Monitor, ClipboardCheck, Calendar, FileUp, Pill, Phone,
-  Package, LayoutDashboard, Users, Settings, LogOut,
+  Package, LayoutDashboard, Users, Settings, LogOut, ExternalLink,
 } from 'lucide-react'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
@@ -15,6 +15,7 @@ interface NavItem {
   label: string
   icon: React.ReactNode
   module: string
+  external?: boolean
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -25,7 +26,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/module5', label: 'ยืนยันรายการยา', icon: <Pill className="h-4 w-4" />, module: 'module5' },
   { to: '/module6', label: 'ติดตาม Case', icon: <Phone className="h-4 w-4" />, module: 'module6' },
   { to: '/master-drugs', label: 'คลังชื่อยา', icon: <Package className="h-4 w-4" />, module: 'master-drugs' },
-  { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" />, module: 'dashboard' },
+  { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" />, module: 'dashboard', external: true },
   { to: '/users', label: 'จัดการผู้ใช้', icon: <Users className="h-4 w-4" />, module: 'users' },
   { to: '/settings', label: 'ตั้งค่าระบบ', icon: <Settings className="h-4 w-4" />, module: 'settings' },
 ]
@@ -40,21 +41,36 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <nav className="flex flex-col gap-1 p-2">
       {visibleItems.map((item) => (
-        <NavLink
-          key={item.to}
-          to={item.to}
-          onClick={onNavigate}
-          className={({ isActive }) =>
-            cn(
-              'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-              'text-white/80 hover:text-white hover:bg-white/10',
-              isActive && 'text-white bg-white/10 border-l-2 border-apple-blue'
-            )
-          }
-        >
-          {item.icon}
-          <span>{item.label}</span>
-        </NavLink>
+        item.external ? (
+          <a
+            key={item.to}
+            href={item.to}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={onNavigate}
+            className="flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors text-white/80 hover:text-white hover:bg-white/10"
+          >
+            {item.icon}
+            <span>{item.label}</span>
+            <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
+          </a>
+        ) : (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            onClick={onNavigate}
+            className={({ isActive }) =>
+              cn(
+                'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                'text-white/80 hover:text-white hover:bg-white/10',
+                isActive && 'text-white bg-white/10 border-l-2 border-apple-blue'
+              )
+            }
+          >
+            {item.icon}
+            <span>{item.label}</span>
+          </NavLink>
+        )
       ))}
     </nav>
   )

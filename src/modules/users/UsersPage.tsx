@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { QueryError } from '@/components/common/QueryError'
+import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import {
   Select,
   SelectContent,
@@ -73,7 +74,7 @@ export default function UsersPage() {
 
         {/* User table */}
         {isLoading ? (
-          <div className="text-center py-12 text-muted-foreground">กำลังโหลด...</div>
+          <LoadingSpinner text="กำลังโหลดข้อมูล..." />
         ) : isError ? (
           <QueryError onRetry={() => refetch()} />
         ) : (

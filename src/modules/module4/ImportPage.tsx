@@ -18,7 +18,7 @@ import { CLINIC_TYPES } from '@/constants/clinicTypes'
 import type { ParsedRow, ParseResult } from '@/utils/excelParser'
 import type { ImportPreviewRequest } from '@/services/importService'
 import { useAuthStore } from '@/stores/authStore'
-import { useEquipmentList } from '@/modules/module1/useEquipment'
+import { useFacilitiesList } from '@/hooks/useFacilities'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 type Step = 1 | 2 | 3
@@ -34,20 +34,7 @@ export default function ImportPage() {
   const previewMutation = useImportPreview()
   const confirmMutation = useImportConfirm()
 
-  const { data: equipmentList = [] } = useEquipmentList()
-
-  // Extract unique facilities from equipment data
-  const facilities = useMemo(() => {
-    const map = new Map<string, string>()
-    for (const eq of equipmentList) {
-      if (!map.has(eq.hosp_code)) {
-        map.set(eq.hosp_code, eq.hosp_name)
-      }
-    }
-    return Array.from(map.entries())
-      .map(([hosp_code, hosp_name]) => ({ hosp_code, hosp_name }))
-      .sort((a, b) => a.hosp_name.localeCompare(b.hosp_name, 'th'))
-  }, [equipmentList])
+  const { data: facilities = [] } = useFacilitiesList()
 
   // Group by VN for display
   const groupedByVN = useMemo(() => {

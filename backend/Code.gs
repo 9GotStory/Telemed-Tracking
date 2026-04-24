@@ -747,6 +747,9 @@ function routeAction(action, data, user) {
     "auth.changePassword": function () {
       return handleChangePassword(user, data);
     },
+    "facilities.list": function () {
+      return handleFacilitiesList(user, data);
+    },
     "equipment.list": function () {
       return handleEquipmentList(user, data);
     },
@@ -1094,6 +1097,48 @@ function getFacilitiesMap() {
     if (code) map[code] = data[i][FACILITIES_COLS.hosp_name];
   }
   return map;
+}
+
+// ---------------------------------------------------------------------------
+// Facilities Handlers
+// ---------------------------------------------------------------------------
+
+/**
+ * facilities.list — GET, returns list of active facilities.
+ * Used by frontend for dropdown selects (replaces deriving from equipment data).
+ * - staff_hsc: only own facility
+ * - staff_hosp+: all active facilities
+ */
+function handleFacilitiesList(user, params) {
+  var facilitiesMap = getFacilitiesMap();
+  var ss = getSpreadsheet();
+  var sheet = ss.getSheetByName("FACILITIES");
+  if (!sheet) return { success: true, data: [] };
+
+  var data = sheet.getDataRange().getValues();
+  var results = [];
+
+  for (var i = 1; i < data.length; i++) {
+    var code = String(data[i][FACILITIES_COLS.hosp_code]);
+    var active = String(data[i][FACILITIES_COLS.active]);
+
+    if (active === "N") continue;
+
+    // staff_hsc can only see own facility
+    if (user.role === "staff_hsc" && code !== user.hosp_code) continue;
+
+    results.push({
+      hosp_code: code,
+      hosp_name: String(data[i][FACILITIES_COLS.hosp_name]),
+    });
+  }
+
+  // Sort by hosp_name (Thai locale)
+  results.sort(function (a, b) {
+    return a.hosp_name.localeCompare(b.hosp_name, "th");
+  });
+
+  return { success: true, data: results };
 }
 
 // ---------------------------------------------------------------------------

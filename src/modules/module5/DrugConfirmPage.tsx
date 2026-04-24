@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select'
 import { useVisitSummaryList } from './useDrugConfirm'
 import { PatientList } from './PatientList'
-import { useEquipmentList } from '@/modules/module1/useEquipment'
+import { useFacilitiesList } from '@/hooks/useFacilities'
 import { useAuthStore } from '@/stores/authStore'
 import { format } from 'date-fns'
 
@@ -23,18 +23,7 @@ export default function DrugConfirmPage() {
   const [hospCode, setHospCode] = useState<string>(user?.role === 'staff_hsc' ? (user?.hosp_code ?? '') : '')
 
   // Facility list for admin users
-  const { data: equipmentList = [] } = useEquipmentList()
-  const facilities = useMemo(() => {
-    const map = new Map<string, string>()
-    for (const eq of equipmentList) {
-      if (!map.has(eq.hosp_code)) {
-        map.set(eq.hosp_code, eq.hosp_name)
-      }
-    }
-    return Array.from(map.entries())
-      .map(([hosp_code, hosp_name]) => ({ hosp_code, hosp_name }))
-      .sort((a, b) => a.hosp_name.localeCompare(b.hosp_name, 'th'))
-  }, [equipmentList])
+  const { data: facilities = [] } = useFacilitiesList()
 
   const filters = useMemo(() => {
     const f: { service_date: string; hosp_code?: string } = { service_date: serviceDate }

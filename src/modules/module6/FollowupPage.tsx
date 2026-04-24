@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { FollowupList } from './FollowupList'
-import { useEquipmentList } from '@/modules/module1/useEquipment'
+import { useFacilitiesList } from '@/hooks/useFacilities'
 import type { FollowupFilters } from '@/services/followupService'
 
 export default function FollowupPage() {
@@ -17,18 +17,7 @@ export default function FollowupPage() {
   const [hospCodeFilter, setHospCodeFilter] = useState<string>('')
   const [dateFilter, setDateFilter] = useState<string>('')
 
-  const { data: equipmentList = [] } = useEquipmentList()
-  const facilities = useMemo(() => {
-    const map = new Map<string, string>()
-    for (const eq of equipmentList) {
-      if (!map.has(eq.hosp_code)) {
-        map.set(eq.hosp_code, eq.hosp_name)
-      }
-    }
-    return Array.from(map.entries())
-      .map(([hosp_code, hosp_name]) => ({ hosp_code, hosp_name }))
-      .sort((a, b) => a.hosp_name.localeCompare(b.hosp_name, 'th'))
-  }, [equipmentList])
+  const { data: facilities = [] } = useFacilitiesList()
 
   const filters = useMemo<FollowupFilters>(() => {
     const f: FollowupFilters = {}

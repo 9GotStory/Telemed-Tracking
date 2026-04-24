@@ -8,7 +8,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export interface Column<T> {
@@ -25,6 +25,7 @@ interface DataTableProps<T> {
   keyExtractor: (row: T) => string
   onRowClick?: (row: T) => void
   emptyMessage?: string
+  pageSize?: number
   className?: string
 }
 
@@ -36,10 +37,12 @@ export function DataTable<T>({
   keyExtractor,
   onRowClick,
   emptyMessage = 'ไม่พบข้อมูล',
+  pageSize = 20,
   className,
 }: DataTableProps<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<SortDir>(null)
+  const [page, setPage] = useState(0)
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
@@ -49,6 +52,7 @@ export function DataTable<T>({
       setSortKey(key)
       setSortDir('asc')
     }
+    setPage(0)
   }
 
   const sortedData = useMemo(() => {
@@ -60,6 +64,17 @@ export function DataTable<T>({
       return sortDir === 'asc' ? cmp : -cmp
     })
   }, [data, sortKey, sortDir])
+
+  const totalPages = Math.ceil(sortedData.length / pageSize)
+  const pageData = useMemo(() => {
+    const start = page * pageSize
+    return sortedData.slice(start, start + pageSize)
+  }, [sortedData, page, pageSize])
+
+  // Reset page if data shrinks
+  if (page > 0 && page >= totalPages) {
+    setPage(Math.max(0, totalPages - 1))
+  }
 
   return (
     <div className={cn('rounded-md border', className)}>
@@ -90,14 +105,14 @@ export function DataTable<T>({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sortedData.length === 0 ? (
+          {pageData.length === 0 ? (
             <TableRow>
               <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
                 {emptyMessage}
               </TableCell>
             </TableRow>
           ) : (
-            sortedData.map((row) => (
+            pageData.map((row) => (
               <TableRow
                 key={keyExtractor(row)}
                 className={cn(
@@ -118,6 +133,44 @@ export function DataTable<T>({
           )}
         </TableBody>
       </Table>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-4 py-3 border-t">
+          <p className="text-sm text-muted-foreground">
+            {page * pageSize + 1}–{Math.min((page + 1) * pageSize, sortedData.length)} จาก {sortedData.length}
+          </p>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+              disabled={page === 0}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            {Array.from({ length: totalPages }, (_, i) => (
+              <Button
+                key={i}
+                variant={i === page ? 'default' : 'outline'}
+                size="sm"
+                className={cn('h-8 w-8 p-0', i === page && 'bg-apple-blue hover:bg-apple-blue/90')}
+                onClick={() => setPage(i)}
+              >
+                {i + 1}
+              </Button>
+            ))}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+              disabled={page >= totalPages - 1}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
