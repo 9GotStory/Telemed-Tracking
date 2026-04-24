@@ -321,6 +321,45 @@
 
 ---
 
+## Phase 13: Backend Logic Review — Bug Fixes & Performance
+
+**Purpose**: Address issues found during full Code.gs review. Fix hosp_code leading zeros, register column mismatch, validation gaps, import diff logic, and visitMeds write performance.
+
+**Source**: Full Code.gs review (3724 lines) — 2026-04-24
+
+### Critical: hosp_code Leading Zeros (Data Integrity)
+
+- [x] T154 Replace `forceText()` with plain string approach in `backend/Code.gs` — **Root cause**: `forceText("00588")` returns `"'00588"` (with literal `'` character). When GAS writes this via `appendRow`/`setValues`, the `'` becomes part of the stored value, NOT a text-format prefix. This breaks `===` comparisons like `row[COLS.hosp_code] === "00588"`. **Fix**: Remove `forceText()` function entirely. Write plain strings (e.g., `hospCode` as `"00588"` not `"'00588"`). The column-level `setNumberFormat("@")` already ensures Sheets treats values as text. File: `backend/Code.gs:17-20` and all call sites
+- [x] T155 Extend `setNumberFormat("@")` to ALL code/text columns in `setupSheets()` — Currently only `hosp_code` columns get text format. Add for: `tel`, `vn`, `hn`, `drug_name`, `equip_id`, `schedule_id`, `user_id`, `log_id`, `drug_id`, `followup_id`, `med_id`, `session_token`, `password_hash`, `password_salt` — any column that could be misinterpreted as a number. File: `backend/Code.gs:3501-3569` (setupSheets function)
+- [x] T156 Fix `sampleData()` inconsistent `'` prefix usage — Some rows use `["'00588", ...]` and others use `["10670", ...]`. Remove all `'` prefixes since `setNumberFormat("@")` handles text formatting. Write plain string values consistently: `["00588", ...]`, `["10669", ...]` etc. File: `backend/Code.gs:3587-3723` (sampleData function)
+- [x] T157 [P] Remove all remaining `forceText()` call sites — After T154, grep Code.gs for `forceText` and replace each with plain `String(val).trim()`. Affected locations: `handleRegister` (hosp_code, tel), `handleEquipmentSave` (hosp_code), `handleReadinessSave` (hosp_code), `handleImportConfirm` (vn, hn, tel, hosp_code, clinic_type). File: `backend/Code.gs` — all handler functions
+- [x] T158 [P] Add `ensureTextFormat()` helper for runtime writes — Create a helper that sets `setNumberFormat("@")` on specific columns of newly appended rows, as a safety net for when `setupSheets` hasn't been run or new columns are added. Call in `appendRow` paths for USERS (hosp_code, tel), EQUIPMENT (hosp_code), VISIT_SUMMARY (vn, hn, tel, hosp_code), VISIT_MEDS (vn). File: `backend/Code.gs` — new helper function after `buildResponse`
+
+### Bug Fixes
+
+- [x] T159 Fix `handleRegister()` missing `force_change` column — `newRow` array has 14 elements but USERS sheet has 15 columns (including `force_change` at index 14). Append empty string `""` as the 15th element so `getLastColumn()` check in `handleChangePassword` works correctly. File: `backend/Code.gs:488-505`
+- [x] T160 Add input validation to `handleScheduleSave()` — Validate `hosp_code` exists in FACILITIES or HOSPITAL sheet before allowing schedule creation. Validate `clinic_type` against allowed values. Prevents orphaned schedule entries. File: `backend/Code.gs:1674-1753`
+- [x] T161 Fix import round 2 diff logic — Current logic compares drug lists by sequential order, causing false mismatch when drugs are in different order. **Fix**: Sort both `newDrugs` and `round1Meds` by `drug_name` before comparison. Also update `has_drug_change` flag in VISIT_SUMMARY when diff finds mismatch. File: `backend/Code.gs:2252-2293`
+- [x] T162 Fix import round 2 duplicate VN in payload — If `visits` array contains the same VN twice, the inner loop updates VISIT_SUMMARY twice and inserts VISIT_MEDS twice. Add dedup: skip if VN already processed in this batch. File: `backend/Code.gs:2214-2330`
+
+### Performance: VisitMeds Batch Updates
+
+- [x] T163 Refactor `handleVisitMedsSave` confirm_all to batch update — Read vmData once, modify status/updated_by/updated_at in memory, write back with single `setValues()`. VISIT_SUMMARY batched too (single row write). File: `backend/Code.gs`
+- [x] T164 Refactor `handleVisitMedsSave` edit to batch update — Read vmData once before loop, build `medIdMap` for O(1) lookup, modify in memory, write back once. New meds still use appendRow. VISIT_SUMMARY batched. File: `backend/Code.gs`
+- [x] T165 Refactor `handleVisitMedsSave` absent to batch update — Read vmData once, modify status=cancelled in memory, write back with single `setValues()`. VISIT_SUMMARY batched. File: `backend/Code.gs`
+
+### Performance: Import Confirm
+
+- [x] T166 Cache sheet data outside loop in `handleImportConfirm` — Read sheets once before loop. Build `vnToVsRow` map (VN→index) for O(1) VISIT_SUMMARY lookup, `vnToRound1Meds` map for O(1) round 1 med collection. Pre-sort round 1 meds by drug_name. File: `backend/Code.gs`
+- [x] T167 Batch VISIT_SUMMARY updates in `handleImportConfirm` — Round 2 modifies vsRows in memory (import_round2_at, diff_status, has_drug_change), writes back entire range with single `setValues()` after loop. File: `backend/Code.gs`
+
+### Verification
+
+- [x] T168 Verify hosp_code comparison works after forceText removal — Static analysis: added `String()` coercion to all 7 comparison sites + 3 response data sites + getFacilitiesMap key that lacked it. All `row[COLS.hosp_code]` reads now consistently wrapped in `String()`. File: `backend/Code.gs`
+- [ ] T169 Run full regression — Test all CRUD operations through every module after batch update refactor. Verify audit logs still record correctly. File: manual testing
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -336,6 +375,7 @@
 - **Phase 9 (US5 Dashboard)**: Depends on Phase 2 only — can start after foundation, but most useful after Phase 6+
 - **Phase 10 (US6 Settings+Users)**: Depends on Phase 3 — independently testable
 - **Phase 11 (Polish)**: After all desired phases complete
+- **Phase 13 (Backend Fixes)**: Depends on Phase 12 — bug fixes + performance for Code.gs
 
 ### User Story Dependencies
 
@@ -419,7 +459,7 @@ Phase 10: T112-T126  (Users + Settings)
 
 ### Estimated Scope
 
-- **Total tasks**: 136
+- **Total tasks**: 153 (Phase 1-12: 136 + Phase 13: 16 + T130 still open)
 - **MVP tasks** (Phases 1-3 + 5-8): ~101 tasks
 - **Post-MVP tasks** (Phases 4, 9-11): ~35 tasks
 - **Per user story**:
