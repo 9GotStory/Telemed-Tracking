@@ -1429,7 +1429,7 @@ function handleEquipmentList(user, params) {
   if (!sheet) return { success: true, data: [] };
 
   var data = sheet.getDataRange().getValues();
-  var facilitiesMap = getFacilitiesMap();
+  var hospitalsMap = getHospitalsMap();
   var results = [];
 
   for (var i = 1; i < data.length; i++) {
@@ -1450,7 +1450,7 @@ function handleEquipmentList(user, params) {
       if (!statusFilter && equipStatus === "inactive") continue;
     }
 
-    var hospName = facilitiesMap[equipHospCode] || getHospName(equipHospCode);
+    var hospName = (hospitalsMap[equipHospCode] && hospitalsMap[equipHospCode].name) || "";
 
     results.push({
       equip_id: row[EQUIPMENT_COLS.equip_id],

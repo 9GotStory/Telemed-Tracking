@@ -1,4 +1,4 @@
-import { Monitor, Pencil, Trash2 } from 'lucide-react'
+import { Monitor, Laptop, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DataTable, type Column } from '@/components/common/DataTable'
 import { StatusBadge } from '@/components/common/StatusBadge'
@@ -18,13 +18,6 @@ const statusMap: Record<string, { variant: 'active' | 'pending' | 'inactive'; la
   inactive: { variant: 'inactive', label: 'ไม่ใช้งาน' },
 }
 
-const deviceTypeLabels: Record<string, string> = {
-  computer: 'คอมพิวเตอร์',
-  notebook: 'โน้ตบุ๊ก',
-  camera: 'กล้อง',
-  mic: 'ไมโครโฟน',
-}
-
 export function EquipmentTable({ data, onEdit, onDelete, showHospName }: EquipmentTableProps) {
   const columns: Column<EquipmentWithHospName>[] = [
     ...(showHospName
@@ -37,22 +30,21 @@ export function EquipmentTable({ data, onEdit, onDelete, showHospName }: Equipme
       : []),
     {
       key: 'set_type',
-      header: 'ชุด',
+      header: 'ชุดอุปกรณ์',
       sortable: true,
-      className: 'w-20',
-      render: (row) => (
-        <span className="inline-flex items-center gap-1 font-medium">
-          <Monitor className="h-3.5 w-3.5 text-apple-blue" />
-          {row.set_type}
-        </span>
-      ),
-    },
-    {
-      key: 'device_type',
-      header: 'ประเภท',
-      sortable: true,
-      className: 'w-28',
-      render: (row) => deviceTypeLabels[row.device_type] ?? row.device_type,
+      className: 'w-40',
+      render: (row) => {
+        const isSetA = row.set_type === 'A'
+        return (
+          <span className="inline-flex items-center gap-1.5 font-medium">
+            {isSetA
+              ? <Monitor className="h-3.5 w-3.5 text-apple-blue" />
+              : <Laptop className="h-3.5 w-3.5 text-apple-blue" />
+            }
+            {isSetA ? 'Desktop' : 'Notebook'}
+          </span>
+        )
+      },
     },
     {
       key: 'os',
