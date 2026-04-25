@@ -18,3 +18,15 @@ export interface ReadinessLog {
 export interface ReadinessLogWithHospName extends ReadinessLog {
   hosp_name: string
 }
+
+export const READINESS_STATUS_VARIANT: Record<OverallStatus, 'active' | 'pending' | 'inactive'> = {
+  ready: 'active',
+  need_fix: 'pending',
+  not_ready: 'inactive',
+}
+
+export const READINESS_STATUS_LABEL: Record<OverallStatus, string> = {
+  ready: 'พร้อม',
+  need_fix: 'ต้องแก้ไข',
+  not_ready: 'ไม่พร้อม',
+}

@@ -11,11 +11,13 @@ const readinessKeys = {
 
 /**
  * Fetch readiness logs with optional filters.
+ * Pass `enabled: false` to skip the query (e.g. when dialog is closed).
  */
-export function useReadinessList(filters: ReadinessFilters = {}) {
+export function useReadinessList(filters: ReadinessFilters = {}, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: readinessKeys.list(filters),
     queryFn: () => readinessService.list(filters),
+    enabled: options?.enabled !== false,
   })
 }
 

@@ -10,14 +10,17 @@ import { PageWrapper } from '@/components/layout/PageWrapper'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { QueryError } from '@/components/common/QueryError'
 import { StatusBadge } from '@/components/common/StatusBadge'
+import { DatePicker } from '@/components/common/DatePicker'
 import { useScheduleList } from '@/modules/module3/useSchedule'
 import { useReadinessList } from './useReadiness'
 import { ReadinessChecklist } from './ReadinessChecklist'
 import { ReadinessHistory } from './ReadinessHistory'
-import { addDays, format } from 'date-fns'
+import { format, addDays } from 'date-fns'
 import { th } from 'date-fns/locale'
-import { ClipboardCheck, History } from 'lucide-react'
+import { ClipboardCheck, History, RotateCcw } from 'lucide-react'
 import { useDebugMount } from '@/hooks/useDebugLog'
+import { READINESS_STATUS_VARIANT, READINESS_STATUS_LABEL } from '@/types/readiness'
+import type { OverallStatus } from '@/types/readiness'
 
 interface ChecklistDialogState {
   hospCode: string
@@ -31,48 +34,42 @@ interface HistoryDialogState {
   open: boolean
 }
 
-const statusVariant: Record<string, 'active' | 'pending' | 'inactive'> = {
-  ready: 'active',
-  need_fix: 'pending',
-  not_ready: 'inactive',
-}
-
-const statusLabel: Record<string, string> = {
-  ready: 'พร้อม',
-  need_fix: 'ต้องแก้ไข',
-  not_ready: 'ไม่พร้อม',
+function getTomorrow(): Date {
+  const d = addDays(new Date(), 1)
+  d.setHours(0, 0, 0, 0)
+  return d
 }
 
 export default function ReadinessPage() {
   useDebugMount('ReadinessPage')
-  const today = format(new Date(), 'yyyy-MM-dd')
-  const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd')
-  const tomorrowMonth = format(addDays(new Date(), 1), 'yyyy-MM')
-
+  const [selectedDate, setSelectedDate] = useState<Date>(getTomorrow)
   const [uncheckedOnly, setUncheckedOnly] = useState(false)
   const [checklistDialog, setChecklistDialog] = useState<ChecklistDialogState>({ hospCode: '', hospName: '', open: false })
   const [historyDialog, setHistoryDialog] = useState<HistoryDialogState>({ hospCode: '', hospName: '', open: false })
 
-  // Get schedules for tomorrow's month to know which facilities have clinics
-  const { data: schedules = [], isLoading: schedulesLoading, isError: schedulesError, refetch: refetchSchedules } = useScheduleList({ month: tomorrowMonth })
+  const selectedDateStr = format(selectedDate, 'yyyy-MM-dd')
+  const selectedMonth = format(selectedDate, 'yyyy-MM')
 
-  // Get readiness logs for today
-  const { data: readinessLogs = [], isLoading: readinessLoading, isError: readinessError, refetch: refetchReadiness } = useReadinessList({ check_date: today })
+  // Get schedules for the selected date's month
+  const { data: schedules = [], isLoading: schedulesLoading, isError: schedulesError, refetch: refetchSchedules } = useScheduleList({ month: selectedMonth })
 
-  // Build facility list from schedules that have clinics tomorrow
+  // Get readiness logs for the selected date
+  const { data: readinessLogs = [], isLoading: readinessLoading, isError: readinessError, refetch: refetchReadiness } = useReadinessList({ check_date: selectedDateStr })
+
+  // Build facility list from schedules on selected date
   const facilitiesWithClinics = useMemo(() => {
     const map = new Map<string, string>()
     for (const s of schedules) {
-      if (s.service_date === tomorrow) {
+      if (s.service_date === selectedDateStr) {
         if (!map.has(s.hosp_code)) {
           map.set(s.hosp_code, s.hosp_name ?? s.hosp_code)
         }
       }
     }
     return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1], 'th'))
-  }, [schedules, tomorrow])
+  }, [schedules, selectedDateStr])
 
-  // Build readiness lookup by hosp_code for today
+  // Build readiness lookup by hosp_code for selected date
   const readinessByHosp = useMemo(() => {
     const map = new Map<string, typeof readinessLogs[number]>()
     for (const log of readinessLogs) {
@@ -87,12 +84,15 @@ export default function ReadinessPage() {
     return facilitiesWithClinics.filter(([code]) => !readinessByHosp.has(code))
   }, [facilitiesWithClinics, uncheckedOnly, readinessByHosp])
 
-  // Get history for selected facility
+  // Get history for selected facility — only fetch when dialog is open
   const { data: historyLogs = [] } = useReadinessList(
-    historyDialog.open ? { hosp_code: historyDialog.hospCode } : {},
+    { hosp_code: historyDialog.hospCode },
+    { enabled: historyDialog.open },
   )
 
   const isLoading = schedulesLoading || readinessLoading
+  const tomorrowStr = useMemo(() => format(addDays(new Date(), 1), 'yyyy-MM-dd'), [])
+  const isTomorrow = selectedDateStr === tomorrowStr
 
   return (
     <PageWrapper>
@@ -101,9 +101,6 @@ export default function ReadinessPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">ตรวจสอบความพร้อม</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              รพ.สต. ที่มีคลินิกในวันที่ {format(addDays(new Date(), 1), 'd MMMM yyyy', { locale: th })}
-            </p>
           </div>
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input
@@ -116,6 +113,37 @@ export default function ReadinessPage() {
           </label>
         </div>
 
+        {/* Date Picker */}
+        <div className="flex items-center gap-3">
+          <DatePicker
+            value={selectedDate}
+            onChange={(date) => {
+              if (date) {
+                const d = new Date(date)
+                d.setHours(0, 0, 0, 0)
+                setSelectedDate(d)
+              }
+            }}
+            placeholder="เลือกวันที่บริการ"
+            className="w-[260px]"
+          />
+          {!isTomorrow && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedDate(getTomorrow())}
+              title="กลับไปพรุ่งนี้"
+            >
+              <RotateCcw className="h-3.5 w-3.5 mr-1" />
+              พรุ่งนี้
+            </Button>
+          )}
+          <span className="text-sm text-muted-foreground">
+            รพ.สต. ที่มีคลินิกวันที่ {format(selectedDate, 'd MMMM yyyy', { locale: th })}
+            {' '}({facilitiesWithClinics.length} แห่ง)
+          </span>
+        </div>
+
         {/* Content */}
         {isLoading ? (
           <LoadingSpinner text="กำลังโหลดข้อมูล..." />
@@ -123,7 +151,7 @@ export default function ReadinessPage() {
           <QueryError onRetry={() => { refetchSchedules(); refetchReadiness() }} />
         ) : displayedFacilities.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
-            ไม่มีคลินิกในวันพรุ่งนี้
+            ไม่มีคลินิกในวันที่ {format(selectedDate, 'd MMMM yyyy', { locale: th })}
           </div>
         ) : (
           <div className="grid gap-3">
@@ -139,8 +167,8 @@ export default function ReadinessPage() {
                   <div className="flex items-center gap-3">
                     <span className="font-medium text-sm">{hospName}</span>
                     {isChecked ? (
-                      <StatusBadge variant={statusVariant[log.overall_status] ?? 'pending'}>
-                        {statusLabel[log.overall_status] ?? log.overall_status}
+                      <StatusBadge variant={READINESS_STATUS_VARIANT[log.overall_status as OverallStatus] ?? 'pending'}>
+                        {READINESS_STATUS_LABEL[log.overall_status as OverallStatus] ?? log.overall_status}
                       </StatusBadge>
                     ) : (
                       <StatusBadge variant="pending">ยังไม่ตรวจ</StatusBadge>
@@ -184,7 +212,7 @@ export default function ReadinessPage() {
           <ReadinessChecklist
             hospCode={checklistDialog.hospCode}
             hospName={checklistDialog.hospName}
-            checkDate={today}
+            checkDate={selectedDateStr}
             existingLog={readinessByHosp.get(checklistDialog.hospCode) ?? null}
             onSuccess={() => setChecklistDialog((prev) => ({ ...prev, open: false }))}
           />
@@ -196,7 +224,7 @@ export default function ReadinessPage() {
         open={historyDialog.open}
         onOpenChange={(open) => setHistoryDialog((prev) => ({ ...prev, open }))}
       >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>ประวัติการตรวจสอบ — {historyDialog.hospName}</DialogTitle>
           </DialogHeader>

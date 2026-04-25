@@ -77,7 +77,7 @@ export function DataTable<T>({
   }
 
   return (
-    <div className={cn('rounded-md border', className)}>
+    <div className={cn('rounded-md border overflow-x-auto', className)}>
       <Table>
         <TableHeader>
           <TableRow className="bg-btn-default-light/50">

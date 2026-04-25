@@ -541,6 +541,23 @@ function buildTextFormatMap() {
  * @param {number} startRow - 1-based row index of the first new row
  * @param {number} numRows - Number of rows to format (default: 1)
  */
+/**
+ * Convert a Sheets cell value to a YYYY-MM-DD string.
+ * Handles Date objects, serial numbers, and plain strings.
+ */
+function toDateStr(val) {
+  if (!val) return "";
+  if (typeof val === "string") return val.trim();
+  if (val instanceof Date) {
+    var y = val.getFullYear();
+    var m = ("0" + (val.getMonth() + 1)).slice(-2);
+    var d = ("0" + val.getDate()).slice(-2);
+    return y + "-" + m + "-" + d;
+  }
+  // Fallback: numeric serial → let Sheets timezone handle via Utilities
+  return String(val);
+}
+
 function ensureTextFormat(sheetName, startRow, numRows) {
   if (!numRows) numRows = 1;
 
@@ -1118,7 +1135,7 @@ function handleDashboardStats() {
   var latestReadiness = {}; // hosp_code -> { status, check_date }
   for (var r = 1; r < rlData.length; r++) {
     var rHospCode = String(rlData[r][READINESS_LOG_COLS.hosp_code]);
-    var rCheckDate = String(rlData[r][READINESS_LOG_COLS.check_date]);
+    var rCheckDate = toDateStr(rlData[r][READINESS_LOG_COLS.check_date]);
     var rStatus = String(rlData[r][READINESS_LOG_COLS.overall_status]);
     // Keep only the latest entry per facility
     if (
@@ -1148,7 +1165,7 @@ function handleDashboardStats() {
   var laterStr = sevenDaysLater.toISOString().split("T")[0];
 
   for (var c = 1; c < csData.length; c++) {
-    var serviceDate = String(csData[c][CLINIC_SCHEDULE_COLS.service_date]);
+    var serviceDate = toDateStr(csData[c][CLINIC_SCHEDULE_COLS.service_date]);
     if (serviceDate >= todayStr && serviceDate <= laterStr) {
       var csHospCode = String(csData[c][CLINIC_SCHEDULE_COLS.hosp_code]);
       upcomingAppointments.push({
@@ -1171,7 +1188,7 @@ function handleDashboardStats() {
   // ---- 3. Monthly sessions: count distinct schedules per month ----
   var monthlySessions = {};
   for (var ms = 1; ms < csData.length; ms++) {
-    var msDate = String(csData[ms][CLINIC_SCHEDULE_COLS.service_date]);
+    var msDate = toDateStr(csData[ms][CLINIC_SCHEDULE_COLS.service_date]);
     var monthKey = msDate.substring(0, 7); // YYYY-MM
     if (monthKey.length === 7) {
       monthlySessions[monthKey] = (monthlySessions[monthKey] || 0) + 1;
@@ -1187,7 +1204,7 @@ function handleDashboardStats() {
   // Build appoint_count lookup from CLINIC_SCHEDULE (reuse csData)
   var scheduleAppointments = {}; // date|code|clinic -> appoint_count
   for (var sa = 1; sa < csData.length; sa++) {
-    var saDate = String(csData[sa][CLINIC_SCHEDULE_COLS.service_date]);
+    var saDate = toDateStr(csData[sa][CLINIC_SCHEDULE_COLS.service_date]);
     var saHosp = String(csData[sa][CLINIC_SCHEDULE_COLS.hosp_code]);
     var saClinic = String(csData[sa][CLINIC_SCHEDULE_COLS.clinic_type]);
     var saKey = saDate + "|" + saHosp + "|" + saClinic;
@@ -2069,7 +2086,7 @@ function handleScheduleList(user, params) {
     var vsData = vsSheet.getDataRange().getValues();
     for (var v = 1; v < vsData.length; v++) {
       if (vsData[v][VISIT_SUMMARY_COLS.attended] === "Y") {
-        var vsDate = String(vsData[v][VISIT_SUMMARY_COLS.service_date]);
+        var vsDate = toDateStr(vsData[v][VISIT_SUMMARY_COLS.service_date]);
         var vsHosp = String(vsData[v][VISIT_SUMMARY_COLS.hosp_code]);
         var vsClinic = String(vsData[v][VISIT_SUMMARY_COLS.clinic_type]);
         var countKey = vsDate + "|" + vsHosp + "|" + vsClinic;
@@ -2082,7 +2099,7 @@ function handleScheduleList(user, params) {
 
   for (var i = 1; i < data.length; i++) {
     var row = data[i];
-    var serviceDate = String(row[CLINIC_SCHEDULE_COLS.service_date]);
+    var serviceDate = toDateStr(row[CLINIC_SCHEDULE_COLS.service_date]);
     var hospCode = String(row[CLINIC_SCHEDULE_COLS.hosp_code]);
     var clinicType = String(row[CLINIC_SCHEDULE_COLS.clinic_type]);
 
@@ -2225,6 +2242,7 @@ function handleScheduleSave(user, data) {
       rows[foundRow - 1][CLINIC_SCHEDULE_COLS.incident_note] || "",
       now,
     ];
+    ensureTextFormat("CLINIC_SCHEDULE", foundRow);
     sheet.getRange(foundRow, 1, 1, rowData.length).setValues([rowData]);
   }
 
@@ -2398,7 +2416,7 @@ function handleReadinessList(user, params) {
   for (var i = 1; i < data.length; i++) {
     var row = data[i];
     var hospCode = String(row[READINESS_LOG_COLS.hosp_code]);
-    var checkDate = String(row[READINESS_LOG_COLS.check_date]);
+    var checkDate = toDateStr(row[READINESS_LOG_COLS.check_date]);
 
     // Filters
     if (hospCodeFilter && hospCode !== hospCodeFilter) continue;
@@ -2483,7 +2501,7 @@ function handleReadinessSave(user, data) {
   for (var i = 1; i < rows.length; i++) {
     if (
       String(rows[i][READINESS_LOG_COLS.hosp_code]) === hospCode &&
-      String(rows[i][READINESS_LOG_COLS.check_date]) === checkDate
+      toDateStr(rows[i][READINESS_LOG_COLS.check_date]) === checkDate
     ) {
       foundRow = i + 1;
       oldValues = {
@@ -2902,7 +2920,7 @@ function handleVisitSummaryList(user, params) {
   for (var i = 1; i < data.length; i++) {
     var row = data[i];
     var hospCode = String(row[VISIT_SUMMARY_COLS.hosp_code]);
-    var serviceDate = String(row[VISIT_SUMMARY_COLS.service_date]);
+    var serviceDate = toDateStr(row[VISIT_SUMMARY_COLS.service_date]);
 
     // Role-based visibility
     if (user.role === "staff_hsc" && hospCode !== user.hosp_code) continue;
@@ -3301,7 +3319,7 @@ function handleFollowupList(user, params) {
 
     var vn = String(row[VISIT_SUMMARY_COLS.vn]);
     var hospCode = String(row[VISIT_SUMMARY_COLS.hosp_code]);
-    var serviceDate = String(row[VISIT_SUMMARY_COLS.service_date]);
+    var serviceDate = toDateStr(row[VISIT_SUMMARY_COLS.service_date]);
 
     // Service date filter
     if (serviceDateFilter && serviceDate !== serviceDateFilter) continue;
@@ -3326,7 +3344,7 @@ function handleFollowupList(user, params) {
       hosp_code: hospCode,
       hosp_name: hospName,
       clinic_type: row[VISIT_SUMMARY_COLS.clinic_type] || "",
-      service_date: String(row[VISIT_SUMMARY_COLS.service_date] || ""),
+      service_date: toDateStr(row[VISIT_SUMMARY_COLS.service_date]),
       has_drug_change: row[VISIT_SUMMARY_COLS.has_drug_change] || "N",
       drug_source_pending: row[VISIT_SUMMARY_COLS.drug_source_pending] || "N",
       dispensing_confirmed: "Y",
@@ -3945,7 +3963,7 @@ function dailyTrigger() {
   var clinics = [];
 
   for (var i = 1; i < csData.length; i++) {
-    var serviceDate = String(csData[i][CLINIC_SCHEDULE_COLS.service_date]);
+    var serviceDate = toDateStr(csData[i][CLINIC_SCHEDULE_COLS.service_date]);
     if (serviceDate === tomorrowStr) {
       var hospCode = String(csData[i][CLINIC_SCHEDULE_COLS.hosp_code]);
       var hospName = facilitiesMap[hospCode] || getHospName(hospCode);
@@ -3992,7 +4010,7 @@ function dailyTrigger() {
     var latestReadiness = {};
     for (var r = 1; r < rlData.length; r++) {
       var rHospCode = String(rlData[r][READINESS_LOG_COLS.hosp_code]);
-      var rCheckDate = String(rlData[r][READINESS_LOG_COLS.check_date]);
+      var rCheckDate = toDateStr(rlData[r][READINESS_LOG_COLS.check_date]);
       var rStatus = String(rlData[r][READINESS_LOG_COLS.overall_status]);
       if (
         !latestReadiness[rHospCode] ||

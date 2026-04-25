@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
+import { format, parseISO } from 'date-fns'
+import { th } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
@@ -6,6 +8,7 @@ import { StatusBadge } from '@/components/common/StatusBadge'
 import { useReadinessSave } from './useReadiness'
 import type { ReadinessFormValues } from '@/services/readinessService'
 import type { ReadinessLogWithHospName, OverallStatus } from '@/types/readiness'
+import { READINESS_STATUS_VARIANT, READINESS_STATUS_LABEL } from '@/types/readiness'
 
 const CHECKLIST_ITEMS = [
   { key: 'cam_ok' as const, label: 'กล้อง (Camera)' },
@@ -14,6 +17,14 @@ const CHECKLIST_ITEMS = [
   { key: 'internet_ok' as const, label: 'อินเทอร์เน็ต (Internet)' },
   { key: 'software_ok' as const, label: 'ซอฟต์แวร์ (Software)' },
 ]
+
+const DEFAULT_CHECKS: Record<string, 'Y' | 'N'> = {
+  cam_ok: 'N',
+  mic_ok: 'N',
+  pc_ok: 'N',
+  internet_ok: 'N',
+  software_ok: 'N',
+}
 
 interface ReadinessChecklistProps {
   hospCode: string
@@ -26,16 +37,10 @@ interface ReadinessChecklistProps {
 export function ReadinessChecklist({ hospCode, hospName, checkDate, existingLog, onSuccess }: ReadinessChecklistProps) {
   const saveMutation = useReadinessSave()
 
-  const [checks, setChecks] = useState<Record<string, 'Y' | 'N'>>({
-    cam_ok: 'N',
-    mic_ok: 'N',
-    pc_ok: 'N',
-    internet_ok: 'N',
-    software_ok: 'N',
-  })
+  const [checks, setChecks] = useState<Record<string, 'Y' | 'N'>>({ ...DEFAULT_CHECKS })
   const [note, setNote] = useState('')
 
-  // Populate from existing log
+  // Reset + populate when log changes (handles both new and existing)
   useEffect(() => {
     if (existingLog) {
       setChecks({
@@ -46,6 +51,9 @@ export function ReadinessChecklist({ hospCode, hospName, checkDate, existingLog,
         software_ok: existingLog.software_ok,
       })
       setNote(existingLog.note ?? '')
+    } else {
+      setChecks({ ...DEFAULT_CHECKS })
+      setNote('')
     }
   }, [existingLog])
 
@@ -66,24 +74,20 @@ export function ReadinessChecklist({ hospCode, hospName, checkDate, existingLog,
     return 'need_fix'
   }, [checks])
 
-  const statusLabel: Record<OverallStatus, string> = {
-    ready: 'พร้อม',
-    not_ready: 'ไม่พร้อม',
-    need_fix: 'ต้องแก้ไข',
-  }
-
-  const statusVariant: Record<OverallStatus, 'active' | 'inactive' | 'pending'> = {
-    ready: 'active',
-    not_ready: 'inactive',
-    need_fix: 'pending',
-  }
-
   const toggleCheck = (key: string) => {
     setChecks((prev) => ({
       ...prev,
       [key]: prev[key] === 'Y' ? 'N' : 'Y',
     }))
   }
+
+  const formattedDate = useMemo(() => {
+    try {
+      return format(parseISO(checkDate), 'd MMMM yyyy', { locale: th })
+    } catch {
+      return checkDate
+    }
+  }, [checkDate])
 
   const handleSubmit = () => {
     if (saveMutation.isPending) return
@@ -114,10 +118,10 @@ export function ReadinessChecklist({ hospCode, hospName, checkDate, existingLog,
       <div className="flex items-center justify-between">
         <div>
           <h3 className="font-semibold text-sm">{hospName}</h3>
-          <p className="text-xs text-muted-foreground">วันที่ตรวจ: {checkDate}</p>
+          <p className="text-xs text-muted-foreground">วันที่ตรวจ: {formattedDate}</p>
         </div>
-        <StatusBadge variant={statusVariant[overallStatus]}>
-          {statusLabel[overallStatus]}
+        <StatusBadge variant={READINESS_STATUS_VARIANT[overallStatus]}>
+          {READINESS_STATUS_LABEL[overallStatus]}
         </StatusBadge>
       </div>
 
