@@ -21,7 +21,7 @@ export const equipmentSchema = z.object({
   is_backup: z.enum(['Y', 'N']).default('N'),
   software: z.string().optional().default(''),
   internet_mbps: z.coerce.number().min(0).nullable().optional(),
-  responsible_person: z.string().optional().default(''),
+  responsible_person: z.string().min(1, 'กรุณาระบุผู้รับผิดชอบ'),
   responsible_tel: z.string().optional().default(''),
   note: z.string().optional().default(''),
 })

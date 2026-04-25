@@ -121,7 +121,7 @@ export default function EquipmentPage() {
         open={formOpen}
         onOpenChange={setFormOpen}
         equipment={editingItem}
-        defaultHospCode={user?.hosp_code}
+        defaultHospCode={user?.role === 'staff_hosp' || user?.role === 'staff_hsc' ? user?.hosp_code : undefined}
       />
 
       {/* Delete Confirmation */}

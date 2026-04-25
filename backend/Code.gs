@@ -450,7 +450,7 @@ function buildResponse(data) {
  * Used as a safety net when setupSheets hasn't been run or new rows are appended
  * beyond the originally formatted range.
  *
- * Call after appendRow() to ensure newly appended rows preserve leading zeros
+ * Call BEFORE setValues() to ensure text columns preserve leading zeros
  * in code fields (e.g., hosp_code "00588" should not become 588).
  */
 var TEXT_FORMAT_COLUMNS = {};
@@ -822,8 +822,9 @@ function handleRegister(data) {
     "", // force_change
   ];
 
-  usersSheet.appendRow(newRow);
-  ensureTextFormat("USERS", usersSheet.getLastRow());
+  var userNewRow = usersSheet.getLastRow() + 1;
+  ensureTextFormat("USERS", userNewRow);
+  usersSheet.getRange(userNewRow, 1, 1, newRow.length).setValues([newRow]);
 
   var message = autoApprove
     ? "Registration successful. You can now log in."
@@ -1344,6 +1345,30 @@ function getFacilitiesMap() {
   return map;
 }
 
+/**
+ * Get map of all hospitals (HOSPITAL sheet) — includes รพ., รพ.สต., สสอ.
+ * Returns { hosp_code: { name, type } }
+ */
+function getHospitalsMap() {
+  var ss = getSpreadsheet();
+  var sheet = ss.getSheetByName("HOSPITAL");
+  if (!sheet) return {};
+
+  var data = sheet.getDataRange().getValues();
+  var map = {};
+  for (var i = 1; i < data.length; i++) {
+    var code = String(data[i][HOSPITAL_COLS.hosp_code]);
+    var active = String(data[i][HOSPITAL_COLS.active]);
+    if (code && active === "Y") {
+      map[code] = {
+        name: String(data[i][HOSPITAL_COLS.hosp_name]),
+        type: String(data[i][HOSPITAL_COLS.hosp_type]),
+      };
+    }
+  }
+  return map;
+}
+
 // ---------------------------------------------------------------------------
 // Facilities Handlers
 // ---------------------------------------------------------------------------
@@ -1470,10 +1495,14 @@ function handleEquipmentSave(user, data) {
     return { success: false, error: "hosp_code is required" };
   }
 
-  // H6: Validate hosp_code exists in FACILITIES
-  var facilitiesMap = getFacilitiesMap();
-  if (!facilitiesMap[hospCode]) {
-    return { success: false, error: "Invalid hosp_code: facility not found" };
+  // H6: Validate hosp_code exists in HOSPITAL (not FACILITIES — equipment can belong to รพ. too)
+  var hospitalsMap = getHospitalsMap();
+  if (!hospitalsMap[hospCode]) {
+    return { success: false, error: "Invalid hosp_code: hospital not found" };
+  }
+  // สสอ. manages equipment but does not own it
+  if (hospitalsMap[hospCode].type === "สสอ.") {
+    return { success: false, error: "Cannot assign equipment to สสอ." };
   }
 
   // Ownership validation: staff_hsc can only save for own facility
@@ -1589,11 +1618,17 @@ function handleEquipmentSave(user, data) {
   ];
 
   if (isNew) {
-    sheet.appendRow(rowData);
-    ensureTextFormat("EQUIPMENT", sheet.getLastRow());
+    var newRow = sheet.getLastRow() + 1;
+    var range = sheet.getRange(newRow, 1, 1, rowData.length);
+    // Set text format BEFORE writing to preserve leading zeros
+    ensureTextFormat("EQUIPMENT", newRow);
+    range.setValues([rowData]);
   } else {
     // Update existing row — foundRow is 1-based
-    sheet.getRange(foundRow, 1, 1, rowData.length).setValues([rowData]);
+    var updateRange = sheet.getRange(foundRow, 1, 1, rowData.length);
+    // Set text format BEFORE writing to preserve leading zeros
+    ensureTextFormat("EQUIPMENT", foundRow);
+    updateRange.setValues([rowData]);
   }
 
   // Audit log — H5: symmetric old/new values
@@ -1831,8 +1866,9 @@ function handleMasterDrugSave(user, data) {
   }
 
   if (isNew) {
-    sheet.appendRow([drugId, drugName, strength, unit, "Y"]);
-    ensureTextFormat("MASTER_DRUGS", sheet.getLastRow());
+    var drugNewRow = sheet.getLastRow() + 1;
+    ensureTextFormat("MASTER_DRUGS", drugNewRow);
+    sheet.getRange(drugNewRow, 1, 1, 5).setValues([[drugId, drugName, strength, unit, "Y"]]);
   }
 
   // Audit log
@@ -2193,7 +2229,9 @@ function handleScheduleSave(user, data) {
   }
 
   if (isNew) {
-    sheet.appendRow([
+    var schedNewRow = sheet.getLastRow() + 1;
+    ensureTextFormat("CLINIC_SCHEDULE", schedNewRow);
+    sheet.getRange(schedNewRow, 1, 1, 10).setValues([[
       scheduleId,
       serviceDate,
       hospCode,
@@ -2204,8 +2242,7 @@ function handleScheduleSave(user, data) {
       "",
       "",
       now,
-    ]);
-    ensureTextFormat("CLINIC_SCHEDULE", sheet.getLastRow());
+    ]]);
   }
 
   // Audit log
@@ -2487,8 +2524,9 @@ function handleReadinessSave(user, data) {
     // Insert new
     logId = Utilities.getUuid();
     rowData[0] = logId;
-    sheet.appendRow(rowData);
-    ensureTextFormat("READINESS_LOG", sheet.getLastRow());
+    var rlNewRow = sheet.getLastRow() + 1;
+    ensureTextFormat("READINESS_LOG", rlNewRow);
+    sheet.getRange(rlNewRow, 1, 1, rowData.length).setValues([rowData]);
   }
   var newValues = {
     hosp_code: hospCode,
@@ -2715,7 +2753,9 @@ function handleImportConfirm(user, data) {
 
     if (round === 1) {
       // Insert VISIT_SUMMARY with defaults
-      vsSheet.appendRow([
+      var vsNewRow = vsSheet.getLastRow() + 1;
+      ensureTextFormat("VISIT_SUMMARY", vsNewRow);
+      vsSheet.getRange(vsNewRow, 1, 1, 17).setValues([[
         String(vn), // vn
         String(visit.hn || ""), // hn
         String(visit.patient_name || ""), // patient_name
@@ -2733,8 +2773,7 @@ function handleImportConfirm(user, data) {
         "pending", // diff_status
         "", // confirmed_by
         "", // confirmed_at
-      ]);
-      ensureTextFormat("VISIT_SUMMARY", vsSheet.getLastRow());
+      ]]);
       importedVisits++;
     } else {
       // Round 2: Update VISIT_SUMMARY using lookup maps (T166) + in-memory batch (T167)
@@ -3119,10 +3158,11 @@ function handleVisitMedsSave(user, data) {
     // Write back all existing med updates in one call
     vmSheet.getDataRange().setValues(vmData);
 
-    // Append new meds (still one appendRow per new med)
+    // Append new meds (format first to preserve leading zeros)
     for (var n = 0; n < newMeds.length; n++) {
-      vmSheet.appendRow(newMeds[n]);
-      ensureTextFormat("VISIT_MEDS", vmSheet.getLastRow());
+      var vmNewRow = vmSheet.getLastRow() + 1;
+      ensureTextFormat("VISIT_MEDS", vmNewRow);
+      vmSheet.getRange(vmNewRow, 1, 1, newMeds[n].length).setValues([newMeds[n]]);
     }
 
     // Batch VISIT_SUMMARY update
@@ -3355,7 +3395,9 @@ function handleFollowupSave(user, data) {
   var followupId = Utilities.getUuid();
   var now = new Date().toISOString();
 
-  fuSheet.appendRow([
+  var fuNewRow = fuSheet.getLastRow() + 1;
+  ensureTextFormat("FOLLOWUP", fuNewRow);
+  fuSheet.getRange(fuNewRow, 1, 1, 9).setValues([[
     followupId,
     vn,
     followupDate,
@@ -3365,8 +3407,7 @@ function handleFollowupSave(user, data) {
     otherNote,
     user.user_id,
     now,
-  ]);
-  ensureTextFormat("FOLLOWUP", fuSheet.getLastRow());
+  ]]);
 
   // Audit log
   appendAuditLog(user, "CREATE", "FOLLOWUP", followupId, null, {
@@ -4225,8 +4266,9 @@ function sampleData() {
       now, // last_login
       "", // force_change
     ];
-    userSheet.appendRow(adminRow);
-    ensureTextFormat("USERS", userSheet.getLastRow());
+    var adminNewRow = userSheet.getLastRow() + 1;
+    ensureTextFormat("USERS", adminNewRow);
+    userSheet.getRange(adminNewRow, 1, 1, adminRow.length).setValues([adminRow]);
     Logger.log(
       "USERS: inserted 1 super_admin (hosp_code=00588, password=password123)",
     );

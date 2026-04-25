@@ -24,18 +24,12 @@ import { equipmentSchema, type EquipmentFormValues } from '@/services/equipmentS
 import type { EquipmentWithHospName } from '@/types/equipment'
 import { useAuthStore } from '@/stores/authStore'
 import { HospCodeSelect } from '@/components/common/HospCodeSelect'
-import { useFacilitiesList } from '@/hooks/useFacilities'
+import { FormChecklistCard, type ChecklistField } from '@/components/common/FormChecklistCard'
+import { useHospitalsList } from '@/hooks/useHospitals'
 
 const SET_TYPES = [
   { value: 'A', label: 'ชุด A (Desktop + Camera + Mic)' },
   { value: 'B', label: 'ชุด B (Notebook)' },
-] as const
-
-const DEVICE_TYPES = [
-  { value: 'computer', label: 'คอมพิวเตอร์' },
-  { value: 'notebook', label: 'โน้ตบุ๊ก' },
-  { value: 'camera', label: 'กล้อง' },
-  { value: 'mic', label: 'ไมโครโฟน' },
 ] as const
 
 const STATUSES = [
@@ -44,13 +38,13 @@ const STATUSES = [
   { value: 'broken', label: 'ชำรุด' },
 ] as const
 
+const OS_OPTIONS = [
+  { value: 'Windows 10', label: 'Windows 10' },
+  { value: 'Windows 11', label: 'Windows 11' },
+] as const
+
 const SOFTWARE_OPTIONS = [
-  'MOPH Meet',
-  'Google Meet',
-  'Zoom',
-  'Microsoft Teams',
-  'Jitsi Meet',
-  'Other',
+  'MOPH Meet'
 ]
 
 function getFormDefaults(equipment: EquipmentWithHospName | null | undefined, defaultHospCode?: string): EquipmentFormValues {
@@ -75,7 +69,7 @@ function getFormDefaults(equipment: EquipmentWithHospName | null | undefined, de
         device_type: 'computer',
         status: 'ready',
         is_backup: 'N',
-        os: '',
+        os: 'Windows 11',
         software: '',
         internet_mbps: null,
         responsible_person: '',
@@ -95,7 +89,9 @@ export function EquipmentForm({ open, onOpenChange, equipment, defaultHospCode }
   const { user } = useAuthStore()
   const saveMutation = useEquipmentSave()
   const isEditing = !!equipment
-  const { data: facilities = [] } = useFacilitiesList()
+  const { data: allHospitals = [] } = useHospitalsList()
+  // Exclude สสอ. — they manage equipment, not own it
+  const hospitals = allHospitals.filter((h) => h.hosp_type !== 'สสอ.')
 
   const {
     register,
@@ -119,6 +115,10 @@ export function EquipmentForm({ open, onOpenChange, equipment, defaultHospCode }
 
   const currentSetType = watch('set_type')
   const currentSoftware = watch('software') ?? ''
+
+  const watchedHospCode = watch('hosp_code')
+  const watchedStatus = watch('status')
+  const watchedPerson = watch('responsible_person')
 
   const onSubmit = (data: EquipmentFormValues) => {
     if (saveMutation.isPending) return
@@ -147,6 +147,14 @@ export function EquipmentForm({ open, onOpenChange, equipment, defaultHospCode }
   // H3: Admin users (admin_hosp, super_admin) can select hospital; staff_hsc is locked to own
   const canChooseHosp = user?.role === 'admin_hosp' || user?.role === 'super_admin'
 
+  // Build checklist for required fields
+  const checklistFields: ChecklistField[] = [
+    ...(canChooseHosp ? [{ label: 'สถานพยาบาล', filled: !!watchedHospCode }] : []),
+    { label: 'ชุดอุปกรณ์', filled: !!currentSetType },
+    { label: 'สถานะ', filled: !!watchedStatus },
+    { label: 'ผู้รับผิดชอบ', filled: !!watchedPerson },
+  ]
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -154,10 +162,13 @@ export function EquipmentForm({ open, onOpenChange, equipment, defaultHospCode }
           <DialogTitle>{isEditing ? 'แก้ไขอุปกรณ์' : 'เพิ่มอุปกรณ์'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit as (data: EquipmentFormValues) => void)} className="grid gap-4">
+          {/* Hidden: device_type auto-set from set_type */}
+          <input type="hidden" {...register('device_type')} />
+
           {/* Hospital — visible for admin roles */}
           {canChooseHosp && (
             <div className="grid gap-2">
-              <Label>สถานพยาบาล</Label>
+              <Label>สถานพยาบาล <span className="text-destructive">*</span></Label>
               <Controller
                 name="hosp_code"
                 control={control}
@@ -165,7 +176,7 @@ export function EquipmentForm({ open, onOpenChange, equipment, defaultHospCode }
                   <HospCodeSelect
                     value={field.value}
                     onChange={field.onChange}
-                    items={facilities}
+                    items={hospitals}
                     placeholder="เลือกสถานพยาบาล"
                   />
                 )}
@@ -180,13 +191,14 @@ export function EquipmentForm({ open, onOpenChange, equipment, defaultHospCode }
 
           {/* Set Type */}
           <div className="grid gap-2">
-            <Label>ชุดอุปกรณ์</Label>
+            <Label>ชุดอุปกรณ์ <span className="text-destructive">*</span></Label>
             <Select
               value={watch('set_type')}
               onValueChange={(v) => {
                 if (!v) return
                 setValue('set_type', v as 'A' | 'B', { shouldValidate: true })
-                if (v === 'B') setValue('device_type', 'notebook', { shouldValidate: true })
+                // Auto-set device_type: A → computer, B → notebook
+                setValue('device_type', v === 'A' ? 'computer' : 'notebook', { shouldValidate: true })
               }}
               items={SET_TYPES.map(t => ({ label: t.label, value: t.value }))}
             >
@@ -208,43 +220,33 @@ export function EquipmentForm({ open, onOpenChange, equipment, defaultHospCode }
             )}
           </div>
 
-          {/* Device Type */}
+          {/* OS */}
           <div className="grid gap-2">
-            <Label>ประเภทอุปกรณ์</Label>
+            <Label>ระบบปฏิบัติการ</Label>
             <Select
-              value={watch('device_type')}
+              value={watch('os')}
               onValueChange={(v) => {
                 if (!v) return
-                setValue('device_type', v as EquipmentFormValues['device_type'], { shouldValidate: true })
+                setValue('os', v, { shouldValidate: true })
               }}
-              disabled={currentSetType === 'B'}
-              items={DEVICE_TYPES.map(d => ({ label: d.label, value: d.value }))}
+              items={OS_OPTIONS.map(o => ({ label: o.label, value: o.value }))}
             >
-              <SelectTrigger className="w-full" aria-label="ประเภทอุปกรณ์">
-                <SelectValue placeholder="เลือกประเภท" />
+              <SelectTrigger className="w-full" aria-label="ระบบปฏิบัติการ">
+                <SelectValue placeholder="เลือกระบบปฏิบัติการ" />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  {DEVICE_TYPES.map((d) => (
-                    <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                  {OS_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                   ))}
                 </SelectGroup>
               </SelectContent>
             </Select>
-            {errors.device_type && (
-              <p role="alert" className="text-xs text-destructive">{errors.device_type.message}</p>
-            )}
-          </div>
-
-          {/* OS */}
-          <div className="grid gap-2">
-            <Label htmlFor="eq-os">ระบบปฏิบัติการ</Label>
-            <Input id="eq-os" placeholder="เช่น Windows 11" {...register('os')} />
           </div>
 
           {/* Status */}
           <div className="grid gap-2">
-            <Label>สถานะ</Label>
+            <Label>สถานะ <span className="text-destructive">*</span></Label>
             <Select
               value={watch('status')}
               onValueChange={(v) => {
@@ -297,12 +299,6 @@ export function EquipmentForm({ open, onOpenChange, equipment, defaultHospCode }
                 </label>
               ))}
             </div>
-            <Input
-              placeholder="อื่นๆ (คั่นด้วย comma)"
-              value={currentSoftware}
-              onChange={(e) => setValue('software', e.target.value, { shouldValidate: true })}
-              className="text-sm"
-            />
           </div>
 
           {/* Internet speed */}
@@ -319,8 +315,11 @@ export function EquipmentForm({ open, onOpenChange, equipment, defaultHospCode }
 
           {/* Responsible person */}
           <div className="grid gap-2">
-            <Label htmlFor="eq-person">ผู้รับผิดชอบ</Label>
+            <Label htmlFor="eq-person">ผู้รับผิดชอบ <span className="text-destructive">*</span></Label>
             <Input id="eq-person" {...register('responsible_person')} />
+            {errors.responsible_person && (
+              <p role="alert" className="text-xs text-destructive">{errors.responsible_person.message}</p>
+            )}
           </div>
 
           {/* Responsible tel */}
@@ -341,6 +340,9 @@ export function EquipmentForm({ open, onOpenChange, equipment, defaultHospCode }
               {errors.root.message}
             </div>
           )}
+
+          {/* Checklist Card */}
+          <FormChecklistCard fields={checklistFields} />
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
