@@ -18,6 +18,7 @@ import { EquipmentTable } from './EquipmentTable'
 import { EquipmentForm } from './EquipmentForm'
 import type { EquipmentWithHospName } from '@/types/equipment'
 import type { EquipStatus } from '@/types/equipment'
+import { useDebugMount } from '@/hooks/useDebugLog'
 
 const STATUS_FILTERS = [
   { value: 'all', label: 'ทุกสถานะ' },
@@ -27,6 +28,7 @@ const STATUS_FILTERS = [
 ] as const
 
 export default function EquipmentPage() {
+  useDebugMount('EquipmentPage')
   const { user } = useAuthStore()
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [formOpen, setFormOpen] = useState(false)

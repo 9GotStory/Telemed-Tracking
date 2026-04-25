@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, Navigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,15 +9,22 @@ import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/stores/authStore'
 import { useRegister } from '@/hooks/useAuth'
 import { registerSchema, type RegisterFormValues } from '@/services/authService'
+import { useDebugMount } from '@/hooks/useDebugLog'
+import { HospCodeSelect } from '@/components/common/HospCodeSelect'
+import { useHospitalsList } from '@/hooks/useHospitals'
 
 export default function RegisterPage() {
+  useDebugMount('RegisterPage')
   const { user } = useAuthStore()
   const registerMutation = useRegister()
   const [submitted, setSubmitted] = useState(false)
+  const [autoApproved, setAutoApproved] = useState(false)
+  const { data: hospitals = [] } = useHospitalsList()
 
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
     setError,
   } = useForm<RegisterFormValues>({
@@ -34,7 +41,8 @@ export default function RegisterPage() {
   const onSubmit = (data: RegisterFormValues) => {
     if (registerMutation.isPending) return
     registerMutation.mutate(data, {
-      onSuccess: () => {
+      onSuccess: (res) => {
+        setAutoApproved(res.auto_approved ?? false)
         setSubmitted(true)
       },
       onError: (error) => {
@@ -54,15 +62,30 @@ export default function RegisterPage() {
           <CardTitle className="text-xl tracking-tight">ลงทะเบียนสำเร็จ</CardTitle>
         </CardHeader>
         <CardContent className="text-center">
-          <p className="text-sm text-muted-foreground">
-            การลงทะเบียนของคุณอยู่ระหว่างรอการอนุมัติ
-            กรุณารอผู้ดูแลระบบอนุมัติบัญชีก่อนเข้าใช้งาน
-          </p>
-          <Link to="/login">
-            <Button variant="outline" className="mt-4 w-full">
-              กลับไปเข้าสู่ระบบ
-            </Button>
-          </Link>
+          {autoApproved ? (
+            <>
+              <p className="text-sm text-muted-foreground">
+                บัญชีของคุณพร้อมใช้งานแล้ว
+              </p>
+              <Link to="/login">
+                <Button className="mt-4 w-full bg-apple-blue hover:bg-apple-blue/90">
+                  เข้าสู่ระบบ
+                </Button>
+              </Link>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                การลงทะเบียนของคุณอยู่ระหว่างรอการอนุมัติ
+                กรุณารอผู้ดูแลระบบอนุมัติบัญชีก่อนเข้าใช้งาน
+              </p>
+              <Link to="/login">
+                <Button variant="outline" className="mt-4 w-full">
+                  กลับไปเข้าสู่ระบบ
+                </Button>
+              </Link>
+            </>
+          )}
         </CardContent>
       </Card>
     )
@@ -83,15 +106,18 @@ export default function RegisterPage() {
           )}
 
           <div className="grid gap-2">
-            <Label htmlFor="reg-hosp_code">รหัสสถานพยาบาล</Label>
-            <Input
-              id="reg-hosp_code"
-              placeholder="เช่น 10669"
-              inputMode="numeric"
-              autoComplete="off"
-              aria-invalid={!!errors.hosp_code}
-              aria-describedby={errors.hosp_code ? 'reg-hosp_code-error' : undefined}
-              {...register('hosp_code')}
+            <Label>สถานพยาบาล</Label>
+            <Controller
+              name="hosp_code"
+              control={control}
+              render={({ field }) => (
+                <HospCodeSelect
+                  value={field.value}
+                  onChange={field.onChange}
+                  items={hospitals}
+                  placeholder="เลือกสถานพยาบาล"
+                />
+              )}
             />
             {errors.hosp_code && (
               <p id="reg-hosp_code-error" role="alert" className="text-xs text-destructive">

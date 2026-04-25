@@ -1,7 +1,8 @@
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { ConfirmModal } from '@/components/common/ConfirmModal'
 import { Button } from '@/components/ui/button'
-import { useUserUpdate, usePasswordReset } from './useUsers'
+import { useUserUpdate } from './useUsers'
+import { PasswordResetDialog } from './PasswordResetDialog'
 import type { UserItem } from '@/services/usersService'
 import { formatBuddhist } from '@/utils/dateUtils'
 import { useState } from 'react'
@@ -26,12 +27,12 @@ interface UserTableProps {
 
 export function UserTable({ users, onApprove }: UserTableProps) {
   const updateMutation = useUserUpdate()
-  const resetMutation = usePasswordReset()
   const [confirmAction, setConfirmAction] = useState<{
     title: string
     description: string
     onConfirm: () => void
   } | null>(null)
+  const [resetUser, setResetUser] = useState<UserItem | null>(null)
 
   const handleSuspend = (user: UserItem) => {
     setConfirmAction({
@@ -48,19 +49,6 @@ export function UserTable({ users, onApprove }: UserTableProps) {
 
   const handleReactivate = (user: UserItem) => {
     updateMutation.mutate({ user_id: user.user_id, status: 'active' })
-  }
-
-  const handleResetPassword = (user: UserItem) => {
-    setConfirmAction({
-      title: 'รีเซ็ตรหัสผ่าน',
-      description: `ต้องการรีเซ็ตรหัสผ่านของ ${user.first_name} ${user.last_name} เป็นรหัสผ่านชั่วคราวหรือไม่? รหัสผ่านจะถูกสร้างโดยระบบ`,
-      onConfirm: () => {
-        resetMutation.mutate(
-          { user_id: user.user_id },
-          { onSuccess: () => setConfirmAction(null) },
-        )
-      },
-    })
   }
 
   if (users.length === 0) {
@@ -87,7 +75,10 @@ export function UserTable({ users, onApprove }: UserTableProps) {
               const statusVariant = STATUS_VARIANT[user.status] ?? 'pending'
               return (
                 <tr key={user.user_id} className="border-b hover:bg-btn-default-light/30">
-                  <td className="py-2.5 pr-3 font-mono text-xs">{user.hosp_code}</td>
+                  <td className="py-2.5 pr-3 text-xs">
+                    <span className="font-medium">{user.hosp_name || user.hosp_code}</span>
+                    <span className="text-muted-foreground ml-1">({user.hosp_code})</span>
+                  </td>
                   <td className="py-2.5 pr-3">{user.first_name} {user.last_name}</td>
                   <td className="py-2.5 pr-3">{user.tel}</td>
                   <td className="py-2.5 pr-3">
@@ -108,7 +99,7 @@ export function UserTable({ users, onApprove }: UserTableProps) {
                       )}
                       {user.status === 'active' && (
                         <>
-                          <Button size="sm" variant="outline" onClick={() => handleResetPassword(user)}>
+                          <Button size="sm" variant="outline" onClick={() => setResetUser(user)}>
                             รีเซ็ตพาส
                           </Button>
                           <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleSuspend(user)}>
@@ -139,6 +130,12 @@ export function UserTable({ users, onApprove }: UserTableProps) {
           onConfirm={confirmAction.onConfirm}
         />
       )}
+
+      <PasswordResetDialog
+        user={resetUser}
+        open={!!resetUser}
+        onOpenChange={(open) => { if (!open) setResetUser(null) }}
+      />
     </>
   )
 }

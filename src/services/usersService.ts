@@ -8,6 +8,7 @@ import { gasGet, gasPost } from '@/services/api'
 const userItemSchema = z.object({
   user_id: z.string(),
   hosp_code: z.string(),
+  hosp_name: z.string().optional().default(''),
   first_name: z.string(),
   last_name: z.string(),
   tel: z.string(),
@@ -20,6 +21,11 @@ const userListSchema = z.array(userItemSchema)
 
 const messageResponseSchema = z.object({
   message: z.string(),
+})
+
+const passwordResetResponseSchema = z.object({
+  message: z.string(),
+  temp_password: z.string().optional(),
 })
 
 // Approve form schema
@@ -87,9 +93,9 @@ export const usersService = {
     return messageResponseSchema.parse(raw)
   },
 
-  /** Reset user password — forces re-login */
-  async resetPassword(data: PasswordResetValues): Promise<{ message: string }> {
+  /** Reset user password — returns temp password for admin to communicate */
+  async resetPassword(data: PasswordResetValues): Promise<{ message: string; temp_password?: string }> {
     const raw = await gasPost<unknown>('users.resetPassword', data)
-    return messageResponseSchema.parse(raw)
+    return passwordResetResponseSchema.parse(raw)
   },
 }

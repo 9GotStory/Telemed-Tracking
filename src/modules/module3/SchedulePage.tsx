@@ -20,8 +20,10 @@ import type { ClinicScheduleWithActual } from '@/types/schedule'
 import type { ClinicType } from '@/constants/clinicTypes'
 import { startOfWeek, addWeeks, addDays, format, subWeeks } from 'date-fns'
 import { th } from 'date-fns/locale'
+import { useDebugMount } from '@/hooks/useDebugLog'
 
 export default function SchedulePage() {
+  useDebugMount('SchedulePage')
   const { user } = useAuthStore()
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [clinicFilter, setClinicFilter] = useState<string>('all')

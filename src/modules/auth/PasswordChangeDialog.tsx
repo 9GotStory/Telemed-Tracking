@@ -53,7 +53,7 @@ export function PasswordChangeDialog() {
           บัญชีของคุณถูกรีเซ็ตรหัสผ่าน กรุณาตั้งรหัสผ่านใหม่
           {user && (
             <span className="block mt-1 font-medium text-foreground">
-              {user.first_name} {user.last_name} ({user.hosp_code})
+              {user.first_name} {user.last_name} ({user.hosp_name || user.hosp_code})
             </span>
           )}
         </p>

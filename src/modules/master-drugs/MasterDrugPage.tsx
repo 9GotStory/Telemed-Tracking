@@ -18,6 +18,7 @@ import { DrugTable } from './DrugTable'
 import { DrugForm } from './DrugForm'
 import { DrugImport } from './DrugImport'
 import type { MasterDrug } from '@/types/drug'
+import { useDebugMount } from '@/hooks/useDebugLog'
 
 const ACTIVE_FILTERS = [
   { value: 'all', label: 'ทั้งหมด' },
@@ -26,6 +27,7 @@ const ACTIVE_FILTERS = [
 ] as const
 
 export default function MasterDrugPage() {
+  useDebugMount('MasterDrugPage')
   const [activeFilter, setActiveFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [formOpen, setFormOpen] = useState(false)

@@ -5,8 +5,10 @@ import { EquipmentStatusGrid } from './EquipmentStatusGrid'
 import { UpcomingAppointments } from './UpcomingAppointments'
 import { AttendanceChart } from './AttendanceChart'
 import { FollowupPipeline } from './FollowupPipeline'
+import { useDebugMount } from '@/hooks/useDebugLog'
 
 export default function DashboardPage() {
+  useDebugMount('DashboardPage')
   const { data: stats, isLoading, error } = useDashboardStats()
 
   const appName = import.meta.env.VITE_APP_NAME || 'Telemed Tracking'

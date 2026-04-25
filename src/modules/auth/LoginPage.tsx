@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Navigate, Link } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,14 +8,20 @@ import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/stores/authStore'
 import { useLogin } from '@/hooks/useAuth'
 import { loginSchema, type LoginFormValues } from '@/services/authService'
+import { useDebugMount } from '@/hooks/useDebugLog'
+import { HospCodeSelect } from '@/components/common/HospCodeSelect'
+import { useHospitalsList } from '@/hooks/useHospitals'
 
 export default function LoginPage() {
+  useDebugMount('LoginPage')
   const { user } = useAuthStore()
   const loginMutation = useLogin()
+  const { data: hospitals = [] } = useHospitalsList()
 
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
     setError,
   } = useForm<LoginFormValues>({
@@ -50,18 +56,21 @@ export default function LoginPage() {
           )}
 
           <div className="grid gap-2">
-            <Label htmlFor="hosp_code">รหัสสถานพยาบาล</Label>
-            <Input
-              id="hosp_code"
-              placeholder="เช่น 11111"
-              inputMode="numeric"
-              autoComplete="username"
-              aria-invalid={!!errors.hosp_code}
-              aria-describedby={errors.hosp_code ? 'hosp_code-error' : undefined}
-              {...register('hosp_code')}
+            <Label>สถานพยาบาล</Label>
+            <Controller
+              name="hosp_code"
+              control={control}
+              render={({ field }) => (
+                <HospCodeSelect
+                  value={field.value}
+                  onChange={field.onChange}
+                  items={hospitals}
+                  placeholder="เลือกสถานพยาบาล"
+                />
+              )}
             />
             {errors.hosp_code && (
-              <p id="hosp_code-error" role="alert" className="text-xs text-destructive">
+              <p role="alert" className="text-xs text-destructive">
                 {errors.hosp_code.message}
               </p>
             )}

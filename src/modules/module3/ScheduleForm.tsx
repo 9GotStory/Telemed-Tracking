@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Dialog,
@@ -22,6 +22,8 @@ import { scheduleSchema, type ScheduleFormValues } from '@/services/scheduleServ
 import { CLINIC_TYPES } from '@/constants/clinicTypes'
 import type { ClinicScheduleWithActual } from '@/types/schedule'
 import { useAuthStore } from '@/stores/authStore'
+import { HospCodeSelect } from '@/components/common/HospCodeSelect'
+import { useFacilitiesList } from '@/hooks/useFacilities'
 
 function getFormDefaults(
   schedule: ClinicScheduleWithActual | null | undefined,
@@ -58,10 +60,12 @@ export function ScheduleForm({ open, onOpenChange, schedule, defaultHospCode, de
   const { user } = useAuthStore()
   const saveMutation = useScheduleSave()
   const isEditing = !!schedule
+  const { data: facilities = [] } = useFacilitiesList()
 
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
     setValue,
     watch,
@@ -112,9 +116,17 @@ export function ScheduleForm({ open, onOpenChange, schedule, defaultHospCode, de
           {canChooseHosp && (
             <div className="grid gap-2">
               <Label>สถานพยาบาล</Label>
-              <Input
-                placeholder="รหัสสถานพยาบาล 5 หลัก"
-                {...register('hosp_code')}
+              <Controller
+                name="hosp_code"
+                control={control}
+                render={({ field }) => (
+                  <HospCodeSelect
+                    value={field.value}
+                    onChange={field.onChange}
+                    items={facilities}
+                    placeholder="เลือกสถานพยาบาล"
+                  />
+                )}
               />
               {errors.hosp_code && (
                 <p role="alert" className="text-xs text-destructive">{errors.hosp_code.message}</p>

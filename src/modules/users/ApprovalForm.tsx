@@ -19,21 +19,16 @@ interface ApprovalFormProps {
 
 export function ApprovalForm({ user, open, onOpenChange }: ApprovalFormProps) {
   const [role, setRole] = useState('')
-  const approveMutation = useUserApprove()
+  const approveMutation = useUserApprove(() => {
+    setRole('')
+    onOpenChange(false)
+  })
 
   if (!user) return null
 
   const handleApprove = () => {
     if (!role) return
-    approveMutation.mutate(
-      { user_id: user.user_id, role },
-      {
-        onSuccess: () => {
-          setRole('')
-          onOpenChange(false)
-        },
-      },
-    )
+    approveMutation.mutate({ user_id: user.user_id, role })
   }
 
   const handleReject = () => {
@@ -51,7 +46,7 @@ export function ApprovalForm({ user, open, onOpenChange }: ApprovalFormProps) {
           <div className="grid grid-cols-2 gap-2">
             <div>
               <span className="text-muted-foreground">รหัสสถานพยาบาล</span>
-              <div className="font-medium">{user.hosp_code}</div>
+              <div className="font-medium">{user.hosp_name || user.hosp_code} ({user.hosp_code})</div>
             </div>
             <div>
               <span className="text-muted-foreground">ชื่อ-สกุล</span>

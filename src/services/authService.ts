@@ -66,6 +66,7 @@ const loginResponseSchema = z.object({
 
 const registerResponseSchema = z.object({
   message: z.string(),
+  auto_approved: z.boolean().optional().default(false),
 })
 
 const messageResponseSchema = z.object({

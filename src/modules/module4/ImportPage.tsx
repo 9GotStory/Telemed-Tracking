@@ -20,10 +20,12 @@ import type { ImportPreviewRequest } from '@/services/importService'
 import { useAuthStore } from '@/stores/authStore'
 import { useFacilitiesList } from '@/hooks/useFacilities'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useDebugMount } from '@/hooks/useDebugLog'
 
 type Step = 1 | 2 | 3
 
 export default function ImportPage() {
+  useDebugMount('ImportPage')
   const { user } = useAuthStore()
   const [step, setStep] = useState<Step>(1)
   const [parseResult, setParseResult] = useState<ParseResult | null>(null)
@@ -157,7 +159,7 @@ export default function ImportPage() {
                 <SelectContent>
                   {facilities.map((f) => (
                     <SelectItem key={f.hosp_code} value={f.hosp_code}>
-                      {f.hosp_name}
+                      {f.hosp_name} ({f.hosp_code})
                     </SelectItem>
                   ))}
                 </SelectContent>

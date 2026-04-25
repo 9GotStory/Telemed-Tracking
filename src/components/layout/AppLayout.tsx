@@ -2,8 +2,12 @@ import { Outlet } from 'react-router-dom'
 import { Toaster } from '@/components/ui/sonner'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Header } from '@/components/layout/Header'
+import { useDebugNav, useDebugMount } from '@/hooks/useDebugLog'
 
 export function AppLayout() {
+  useDebugNav()
+  useDebugMount('AppLayout')
+
   return (
     <div className="min-h-svh flex">
       <Sidebar />

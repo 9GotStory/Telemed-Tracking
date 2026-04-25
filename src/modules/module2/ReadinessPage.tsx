@@ -17,6 +17,7 @@ import { ReadinessHistory } from './ReadinessHistory'
 import { addDays, format } from 'date-fns'
 import { th } from 'date-fns/locale'
 import { ClipboardCheck, History } from 'lucide-react'
+import { useDebugMount } from '@/hooks/useDebugLog'
 
 interface ChecklistDialogState {
   hospCode: string
@@ -43,6 +44,7 @@ const statusLabel: Record<string, string> = {
 }
 
 export default function ReadinessPage() {
+  useDebugMount('ReadinessPage')
   const today = format(new Date(), 'yyyy-MM-dd')
   const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd')
   const tomorrowMonth = format(addDays(new Date(), 1), 'yyyy-MM')

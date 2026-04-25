@@ -11,8 +11,10 @@ import { Input } from '@/components/ui/input'
 import { FollowupList } from './FollowupList'
 import { useFacilitiesList } from '@/hooks/useFacilities'
 import type { FollowupFilters } from '@/services/followupService'
+import { useDebugMount } from '@/hooks/useDebugLog'
 
 export default function FollowupPage() {
+  useDebugMount('FollowupPage')
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [hospCodeFilter, setHospCodeFilter] = useState<string>('')
   const [dateFilter, setDateFilter] = useState<string>('')
@@ -58,7 +60,7 @@ export default function FollowupPage() {
               <SelectItem value="__all__">ทุกแห่ง</SelectItem>
               {facilities.map((f) => (
                 <SelectItem key={f.hosp_code} value={f.hosp_code}>
-                  {f.hosp_name}
+                  {f.hosp_name} ({f.hosp_code})
                 </SelectItem>
               ))}
             </SelectContent>

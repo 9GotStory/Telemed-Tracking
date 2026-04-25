@@ -15,13 +15,14 @@ export function useUsersList(filters: UserFilters = {}) {
   })
 }
 
-export function useUserApprove() {
+export function useUserApprove(onSuccess?: () => void) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (data: UserApproveValues) => usersService.approve(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: usersKeys.all })
       toast.success('อนุมัติผู้ใช้สำเร็จ')
+      onSuccess?.()
     },
     onError: (err) => { toast.error('อนุมัติไม่สำเร็จ', { description: err.message }) },
   })

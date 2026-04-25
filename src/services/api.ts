@@ -8,6 +8,7 @@
  */
 
 import { useAuthStore } from '@/stores/authStore'
+import { debug } from '@/utils/debugLogger'
 
 const GAS_URL = import.meta.env.VITE_GAS_API_URL as string
 
@@ -47,26 +48,50 @@ function checkAndHandleUnauthorized(errorMsg: string): void {
   }
 }
 
+/** Log GAS debug trace if present in response */
+function logGasTrace(action: string, json: Record<string, unknown>): void {
+  if ('_debug' in json && json._debug) {
+    debug.api(`[GAS TRACE] ${action}`, json._debug)
+  }
+}
+
+/** Summarize response data for debug log (truncates large payloads) */
+function summarizeData(data: unknown): unknown {
+  if (Array.isArray(data)) return `[${data.length} items]`
+  if (data && typeof data === 'object') return data
+  return data
+}
+
 /**
  * GET request — token and all params as query string.
  * Return type is unknown — caller MUST validate with Zod before use.
  */
 export async function gasGet<T>(action: string, params: Record<string, string> = {}): Promise<T> {
-  const query = new URLSearchParams({ action, token: getToken(), ...params })
+  const start = Date.now()
+
+  // Add _debug flag when debug logging is enabled
+  const debugParams = debug.isEnabled() ? { ...params, _debug: 'true' } : params
+  debug.api(`→ GET ${action}`, { params })
+
+  const query = new URLSearchParams({ action, token: getToken(), ...debugParams })
   const res = await fetch(`${GAS_URL}?${query}`)
 
   if (!res.ok) {
+    debug.error(`← GET ${action} HTTP ${res.status}`)
     throw new Error(`HTTP ${res.status}: ${res.statusText}`)
   }
 
   const json: unknown = await res.json()
   if (typeof json === 'object' && json !== null && 'success' in json) {
+    logGasTrace(action, json as Record<string, unknown>)
     const response = json as { success: boolean; data?: unknown; error?: string }
     if (!response.success) {
       const errMsg = response.error ?? 'GAS error'
+      debug.error(`← GET ${action} FAILED (${Date.now() - start}ms)`, { error: errMsg })
       checkAndHandleUnauthorized(errMsg)
       throw new Error(errMsg)
     }
+    debug.api(`← GET ${action} OK (${Date.now() - start}ms)`, { response: summarizeData(response.data) })
     return response.data as T
   }
 
@@ -78,27 +103,39 @@ export async function gasGet<T>(action: string, params: Record<string, string> =
  * Return type is unknown — caller MUST validate with Zod before use.
  */
 export async function gasPost<T>(action: string, data: unknown = {}): Promise<T> {
+  const start = Date.now()
+  debug.api(`→ POST ${action}`, { data })
+
+  // Add _debug flag when debug logging is enabled
+  const body = debug.isEnabled()
+    ? { action, token: getToken(), data, _debug: true }
+    : { action, token: getToken(), data }
+
   const res = await fetch(GAS_URL, {
     method: 'POST',
-    body: JSON.stringify({ action, token: getToken(), data }),
+    body: JSON.stringify(body),
     // Intentionally NO headers — GAS requires text/plain (browser default)
   })
 
   if (!res.ok) {
+    debug.error(`← POST ${action} HTTP ${res.status}`)
     throw new Error(`HTTP ${res.status}: ${res.statusText}`)
   }
 
   const json: unknown = await res.json()
   if (typeof json === 'object' && json !== null && 'success' in json) {
+    logGasTrace(action, json as Record<string, unknown>)
     const response = json as { success: boolean; data?: unknown; error?: string }
     if (!response.success) {
       const errMsg = response.error ?? 'GAS error'
+      debug.error(`← POST ${action} FAILED (${Date.now() - start}ms)`, { error: errMsg })
       // Don't auto-redirect on auth.login / auth.register failures
       if (action !== 'auth.login' && action !== 'auth.register') {
         checkAndHandleUnauthorized(errMsg)
       }
       throw new Error(errMsg)
     }
+    debug.api(`← POST ${action} OK (${Date.now() - start}ms)`, { response: summarizeData(response.data) })
     return response.data as T
   }
 

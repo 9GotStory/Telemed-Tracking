@@ -187,67 +187,247 @@ var SETTINGS_COLS = {
 };
 
 // ---------------------------------------------------------------------------
+// Sheet Header Verification
+// ---------------------------------------------------------------------------
+
+var SHEET_HEADERS = {
+  USERS: [
+    "user_id", "hosp_code", "first_name", "last_name", "tel",
+    "password_hash", "password_salt", "role", "status", "approved_by",
+    "session_token", "session_expires", "created_at", "last_login", "force_change",
+  ],
+  HOSPITAL: ["hosp_code", "hosp_name", "hosp_type", "active"],
+  FACILITIES: ["hosp_code", "hosp_name", "contact_name", "contact_tel", "active"],
+  EQUIPMENT: [
+    "equip_id", "hosp_code", "set_type", "device_type", "os", "status",
+    "is_backup", "software", "internet_mbps", "responsible_person",
+    "responsible_tel", "note", "updated_at", "updated_by",
+  ],
+  MASTER_DRUGS: ["drug_id", "drug_name", "strength", "unit", "active"],
+  CLINIC_SCHEDULE: [
+    "schedule_id", "service_date", "hosp_code", "clinic_type", "service_time",
+    "appoint_count", "telemed_link", "link_added_by", "incident_note", "updated_at",
+  ],
+  READINESS_LOG: [
+    "log_id", "hosp_code", "check_date", "cam_ok", "mic_ok", "pc_ok",
+    "internet_ok", "software_ok", "overall_status", "note", "checked_by", "checked_at",
+  ],
+  VISIT_SUMMARY: [
+    "vn", "hn", "patient_name", "dob", "tel", "clinic_type", "hosp_code",
+    "service_date", "attended", "has_drug_change", "drug_source_pending",
+    "dispensing_confirmed", "import_round1_at", "import_round2_at",
+    "diff_status", "confirmed_by", "confirmed_at",
+  ],
+  VISIT_MEDS: [
+    "med_id", "vn", "drug_name", "strength", "qty", "unit", "sig",
+    "source", "is_changed", "round", "status", "note", "updated_by", "updated_at",
+  ],
+  FOLLOWUP: [
+    "followup_id", "vn", "followup_date", "general_condition",
+    "side_effect", "drug_adherence", "other_note", "recorded_by", "recorded_at",
+  ],
+  SETTINGS: ["key", "value"],
+  AUDIT_LOG: [
+    "log_id", "user_id", "action", "module", "target_id",
+    "old_value", "new_value", "created_at",
+  ],
+};
+
+/**
+ * Verify that actual sheet headers match expected column definitions.
+ * Returns { ok: boolean, sheets: { [name]: { ok, expected, actual, mismatches } } }
+ */
+function verifySheetHeaders() {
+  var ss = getSpreadsheet();
+  var result = { ok: true, sheets: {} };
+
+  for (var sheetName in SHEET_HEADERS) {
+    var expected = SHEET_HEADERS[sheetName];
+    var sheet = ss.getSheetByName(sheetName);
+
+    if (!sheet) {
+      result.ok = false;
+      result.sheets[sheetName] = {
+        ok: false,
+        error: "Sheet not found",
+        expected: expected,
+        actual: null,
+      };
+      continue;
+    }
+
+    try {
+      var lastCol = sheet.getLastColumn();
+      var colCount = Math.max(lastCol, expected.length);
+      var headerRow = sheet.getRange(1, 1, 1, colCount).getValues()[0];
+      var actual = headerRow.map(function (v) { return String(v); });
+      var mismatches = [];
+
+      for (var i = 0; i < expected.length; i++) {
+        var act = actual[i] || "";
+        if (act !== expected[i]) {
+          mismatches.push({
+            index: i,
+            expected: expected[i],
+            actual: act,
+          });
+        }
+      }
+
+      var sheetOk = mismatches.length === 0 && actual.length >= expected.length;
+      if (!sheetOk) result.ok = false;
+
+      result.sheets[sheetName] = {
+        ok: sheetOk,
+        expected: expected,
+        actual: actual,
+        mismatches: mismatches,
+      };
+    } catch (sheetErr) {
+      result.ok = false;
+      result.sheets[sheetName] = {
+        ok: false,
+        error: "Error reading sheet: " + (sheetErr.message || String(sheetErr)),
+        expected: expected,
+        actual: null,
+      };
+    }
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Debug Trace Collector
+// ---------------------------------------------------------------------------
+
+var _debugSteps = [];
+var _debugMode = false;
+
+function debugTrace(step, detail) {
+  if (!_debugMode) return;
+  _debugSteps.push({
+    step: step,
+    ms: Date.now(),
+    detail: typeof detail === "string" ? detail : JSON.stringify(detail),
+  });
+}
+
+function startDebugTrace() {
+  _debugMode = true;
+  _debugSteps = [];
+}
+
+function getDebugTrace(startMs) {
+  var trace = _debugSteps;
+  _debugSteps = [];
+  _debugMode = false;
+  if (trace.length === 0) return undefined;
+  return { duration_ms: Date.now() - startMs, steps: trace };
+}
+
+// ---------------------------------------------------------------------------
 // Entry Points
 // ---------------------------------------------------------------------------
 
 function doGet(e) {
+  var startMs = Date.now();
+  var wantDebug = e.parameter._debug === "true";
+  if (wantDebug) startDebugTrace();
+
   try {
     if (!SPREADSHEET_ID) {
-      return buildResponse({
-        success: false,
-        error: "Server not configured: SPREADSHEET_ID is empty",
-      });
+      var configResult = { success: false, error: "Server not configured: SPREADSHEET_ID is empty" };
+      if (wantDebug) configResult._debug = getDebugTrace(startMs);
+      return buildResponse(configResult);
     }
 
     var token = e.parameter.token;
     var action = e.parameter.action;
 
+    debugTrace("doGet", { action: action });
+
     // Public endpoints (no token required)
     if (action === "dashboard.stats") {
-      return buildResponse(handleDashboardStats());
+      var result = handleDashboardStats();
+      if (wantDebug) result._debug = getDebugTrace(startMs);
+      return buildResponse(result);
+    }
+    if (action === "hospital.list") {
+      var result = handleHospitalList();
+      if (wantDebug) result._debug = getDebugTrace(startMs);
+      return buildResponse(result);
     }
 
     var user = validateSession(token);
+    debugTrace("validateSession", { ok: !!user });
     if (!user) {
-      return buildResponse({ success: false, error: "Unauthorized" });
+      var unauthResult = { success: false, error: "Unauthorized" };
+      if (wantDebug) unauthResult._debug = getDebugTrace(startMs);
+      return buildResponse(unauthResult);
     }
 
-    return buildResponse(routeAction(action, e.parameter, user));
+    var result = routeAction(action, e.parameter, user);
+    if (wantDebug) result._debug = getDebugTrace(startMs);
+    return buildResponse(result);
   } catch (err) {
-    return buildResponse({ success: false, error: err.message || String(err) });
+    debugTrace("ERROR", err.message || String(err));
+    var errorResult = { success: false, error: err.message || String(err) };
+    if (wantDebug) errorResult._debug = getDebugTrace(startMs);
+    return buildResponse(errorResult);
   }
 }
 
 function doPost(e) {
+  var startMs = Date.now();
+  var wantDebug = false;
+  try {
+    var payload = JSON.parse(e.postData.contents);
+    wantDebug = payload._debug === true;
+  } catch (_) {}
+  if (wantDebug) startDebugTrace();
+
   try {
     if (!SPREADSHEET_ID) {
-      return buildResponse({
-        success: false,
-        error: "Server not configured: SPREADSHEET_ID is empty",
-      });
+      var configResult = { success: false, error: "Server not configured: SPREADSHEET_ID is empty" };
+      if (wantDebug) configResult._debug = getDebugTrace(startMs);
+      return buildResponse(configResult);
     }
 
-    var payload = JSON.parse(e.postData.contents);
-    var token = payload.token;
     var action = payload.action;
+    var token = payload.token;
     var data = payload.data || {};
+
+    debugTrace("doPost", { action: action });
 
     // Public auth endpoints (no token required)
     if (action === "auth.login") {
-      return buildResponse(handleLogin(data));
+      var result = handleLogin(data);
+      if (wantDebug) result._debug = getDebugTrace(startMs);
+      return buildResponse(result);
     }
     if (action === "auth.register") {
-      return buildResponse(handleRegister(data));
+      var result = handleRegister(data);
+      if (wantDebug) result._debug = getDebugTrace(startMs);
+      return buildResponse(result);
     }
 
     var user = validateSession(token);
+    debugTrace("validateSession", { ok: !!user });
     if (!user) {
-      return buildResponse({ success: false, error: "Unauthorized" });
+      var unauthResult = { success: false, error: "Unauthorized" };
+      if (wantDebug) unauthResult._debug = getDebugTrace(startMs);
+      return buildResponse(unauthResult);
     }
 
-    return buildResponse(routeAction(action, data, user));
+    var result = routeAction(action, data, user);
+    if (wantDebug) result._debug = getDebugTrace(startMs);
+    return buildResponse(result);
   } catch (err) {
-    return buildResponse({ success: false, error: err.message || String(err) });
+    debugTrace("ERROR", err.message || String(err));
+    var errorResult = { success: false, error: err.message || String(err) };
+    if (wantDebug) errorResult._debug = getDebugTrace(startMs);
+    return buildResponse(errorResult);
   }
 }
 
@@ -406,6 +586,7 @@ function validateSession(token) {
 
   var ss = getSpreadsheet();
   var sheet = ss.getSheetByName("USERS");
+  if (!sheet) return null;
   var data = sheet.getDataRange().getValues();
 
   for (var i = 1; i < data.length; i++) {
@@ -447,7 +628,9 @@ function validateSession(token) {
  */
 function getHospName(hospCode) {
   var ss = getSpreadsheet();
-  var data = ss.getSheetByName("HOSPITAL").getDataRange().getValues();
+  var sheet = ss.getSheetByName("HOSPITAL");
+  if (!sheet) return "";
+  var data = sheet.getDataRange().getValues();
 
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][HOSPITAL_COLS.hosp_code]) === hospCode) {
@@ -468,6 +651,7 @@ function getHospName(hospCode) {
 function handleLogin(data) {
   var hospCode = String(data.hosp_code || "").trim();
   var password = String(data.password || "");
+  debugTrace("handleLogin.start", { hosp_code: hospCode });
 
   if (!hospCode || !password) {
     return { success: false, error: "กรุณากรอกข้อมูลให้ครบ" };
@@ -546,6 +730,7 @@ function handleLogin(data) {
  * Public endpoint (no token required).
  */
 function handleRegister(data) {
+  debugTrace("handleRegister.start");
   var hospCode = String(data.hosp_code || "").trim();
   var password = String(data.password || "");
   var firstName = String(data.first_name || "").trim();
@@ -605,8 +790,13 @@ function handleRegister(data) {
     }
   }
 
-  // Determine role from hosp_type
-  var role = getRoleForHospType(hospType);
+  // Role is blank at registration — admin assigns role during approval.
+  // Exception: first user in system with hosp_type "สสอ." → auto-approve as super_admin.
+  var isFirstUser = (usersSheet.getLastRow() === 1); // only header row exists
+  var isSuperAdminType = (hospType === "สสอ.");
+  var autoApprove = isFirstUser && isSuperAdminType;
+  var role = autoApprove ? "super_admin" : "";
+  var initialStatus = autoApprove ? "active" : "pending";
 
   // Hash password
   var salt = generateSalt();
@@ -622,8 +812,8 @@ function handleRegister(data) {
     String(tel), // tel
     hash, // password_hash
     salt, // password_salt
-    role, // role
-    "pending", // status
+    role, // role: blank (pending) or super_admin (auto-approved first user)
+    initialStatus, // status: active for first super_admin, pending otherwise
     "", // approved_by
     "", // session_token
     "", // session_expires
@@ -635,9 +825,13 @@ function handleRegister(data) {
   usersSheet.appendRow(newRow);
   ensureTextFormat("USERS", usersSheet.getLastRow());
 
+  var message = autoApprove
+    ? "Registration successful. You can now log in."
+    : "Registration submitted. Awaiting admin approval.";
+
   return {
     success: true,
-    data: { message: "Registration submitted. Awaiting admin approval." },
+    data: { message: message, auto_approved: autoApprove },
   };
 }
 
@@ -726,15 +920,6 @@ function bytesToHex(bytes) {
 }
 
 // ---------------------------------------------------------------------------
-// Role Helper
-// ---------------------------------------------------------------------------
-
-function getRoleForHospType(hospType) {
-  if (hospType === "สสอ.") return "super_admin";
-  if (hospType === "รพ.") return "admin_hosp";
-  return "staff_hsc"; // รพ.สต.
-}
-
 // ---------------------------------------------------------------------------
 // Action Router (stubs for future modules)
 // ---------------------------------------------------------------------------
@@ -831,6 +1016,31 @@ function routeAction(action, data, user) {
     "auditLog.list": function () {
       return handleAuditLogList(user, data);
     },
+    "system.verify": function () {
+      if (user.role !== "super_admin") {
+        return { success: false, error: "Forbidden" };
+      }
+      var report = verifySheetHeaders();
+      return { success: true, data: report };
+    },
+    "system.dumpUsers": function () {
+      if (user.role !== "super_admin") {
+        return { success: false, error: "Forbidden" };
+      }
+      var ss = getSpreadsheet();
+      var sheet = ss.getSheetByName("USERS");
+      var data = sheet.getDataRange().getValues();
+      var headers = SHEET_HEADERS.USERS;
+      var rows = [];
+      for (var i = 1; i < data.length; i++) {
+        var cells = {};
+        for (var c = 0; c < headers.length; c++) {
+          cells[headers[c]] = String(data[i][c] || "");
+        }
+        rows.push({ row: i + 1, cells: cells });
+      }
+      return { success: true, data: { headers: headers, rows: rows } };
+    },
   };
 
   var handler = routes[action];
@@ -838,7 +1048,10 @@ function routeAction(action, data, user) {
     return { success: false, error: "Unknown action: " + action };
   }
 
-  return handler();
+  debugTrace("routeAction.dispatch", { action: action, user_role: user.role });
+  var result = handler();
+  debugTrace("routeAction.complete", { action: action, success: result.success !== false });
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -850,6 +1063,38 @@ function routeAction(action, data, user) {
  * Returns aggregate statistics with NO patient-identifiable data.
  * CRITICAL: Must never include names, phone, VN, HN, or individual drug lists.
  */
+/**
+ * hospital.list — GET, public (no token required).
+ * Returns active hospitals for dropdown selects on Login/Register pages.
+ * Safe: no sensitive data exposed.
+ */
+function handleHospitalList() {
+  var ss = getSpreadsheet();
+  var sheet = ss.getSheetByName("HOSPITAL");
+  if (!sheet) return { success: true, data: [] };
+
+  var data = sheet.getDataRange().getValues();
+  var results = [];
+
+  for (var i = 1; i < data.length; i++) {
+    var code = String(data[i][HOSPITAL_COLS.hosp_code]);
+    var active = String(data[i][HOSPITAL_COLS.active]);
+    if (active !== "Y") continue;
+
+    results.push({
+      hosp_code: code,
+      hosp_name: String(data[i][HOSPITAL_COLS.hosp_name]),
+      hosp_type: String(data[i][HOSPITAL_COLS.hosp_type]),
+    });
+  }
+
+  results.sort(function (a, b) {
+    return a.hosp_name.localeCompare(b.hosp_name, "th");
+  });
+
+  return { success: true, data: results };
+}
+
 function handleDashboardStats() {
   var ss = getSpreadsheet();
   var facilitiesMap = getFacilitiesMap();
@@ -1217,6 +1462,7 @@ function handleEquipmentList(user, params) {
  * - AUDIT_LOG entry
  */
 function handleEquipmentSave(user, data) {
+  debugTrace("handleEquipmentSave.start", { hosp_code: String(data.hosp_code || ""), equip_id: String(data.equip_id || "") });
   var equipId = String(data.equip_id || "").trim();
   var hospCode = String(data.hosp_code || "").trim();
 
@@ -1500,6 +1746,7 @@ function handleMasterDrugList(user, params) {
  * FK check: cannot change drug_name if referenced in VISIT_MEDS.
  */
 function handleMasterDrugSave(user, data) {
+  debugTrace("handleMasterDrugSave.start", { drug_name: String(data.drug_name || "") });
   // Access control
   if (user.role !== "super_admin" && user.role !== "admin_hosp") {
     return { success: false, error: "Access denied: admin only" };
@@ -1852,6 +2099,7 @@ function handleScheduleList(user, params) {
  * Access: super_admin, admin_hosp only.
  */
 function handleScheduleSave(user, data) {
+  debugTrace("handleScheduleSave.start", { service_date: String(data.service_date || ""), hosp_code: String(data.hosp_code || "") });
   // Access control
   if (user.role !== "super_admin" && user.role !== "admin_hosp") {
     return { success: false, error: "Access denied: admin only" };
@@ -2392,6 +2640,7 @@ function handleImportPreview(user, data) {
  * Round 2: Update VISIT_SUMMARY + diff against round 1 meds.
  */
 function handleImportConfirm(user, data) {
+  debugTrace("handleImportConfirm.start");
   // Access control
   if (user.role !== "super_admin" && user.role !== "admin_hosp") {
     return { success: false, error: "Access denied: admin only" };
@@ -2721,6 +2970,7 @@ function handleVisitMedsList(user, params) {
  * - absent: Set attended=N, cancel all meds.
  */
 function handleVisitMedsSave(user, data) {
+  debugTrace("handleVisitMedsSave.start", { vn: String(data.vn || ""), action_type: String(data.action_type || "") });
   var vn = String(data.vn || "").trim();
   var actionType = String(data.action_type || "").trim();
   var meds = data.meds || [];
@@ -3063,6 +3313,7 @@ function handleFollowupList(user, params) {
  * Multiple followup records per VN are allowed.
  */
 function handleFollowupSave(user, data) {
+  debugTrace("handleFollowupSave.start", { vn: String(data.vn || ""), followup_date: String(data.followup_date || "") });
   // Access control
   if (user.role !== "super_admin" && user.role !== "admin_hosp") {
     return { success: false, error: "Access denied: admin only" };
@@ -3171,6 +3422,7 @@ function handleUsersList(user, params) {
     results.push({
       user_id: row[USERS_COLS.user_id],
       hosp_code: String(row[USERS_COLS.hosp_code]),
+      hosp_name: getHospName(String(row[USERS_COLS.hosp_code])),
       first_name: String(row[USERS_COLS.first_name]),
       last_name: String(row[USERS_COLS.last_name]),
       tel: String(row[USERS_COLS.tel]),
@@ -3194,6 +3446,7 @@ function handleUsersList(user, params) {
  * Validates role permission: admin_hosp can only assign staff_hosp/staff_hsc.
  */
 function handleUsersApprove(user, data) {
+  debugTrace("handleUsersApprove.start", { target: String(data.user_id || "") });
   // Access control
   if (user.role !== "super_admin" && user.role !== "admin_hosp") {
     return { success: false, error: "Access denied" };
@@ -3223,7 +3476,7 @@ function handleUsersApprove(user, data) {
   var oldRole = "";
 
   for (var i = 1; i < rows.length; i++) {
-    if (rows[i][USERS_COLS.user_id] === targetUserId) {
+    if (String(rows[i][USERS_COLS.user_id]) === targetUserId) {
       foundRow = i + 1;
       oldStatus = String(rows[i][USERS_COLS.status]);
       oldRole = String(rows[i][USERS_COLS.role]);
@@ -3281,7 +3534,7 @@ function handleUsersUpdate(user, data) {
   var oldRole = "";
 
   for (var i = 1; i < rows.length; i++) {
-    if (rows[i][USERS_COLS.user_id] === targetUserId) {
+    if (String(rows[i][USERS_COLS.user_id]) === targetUserId) {
       foundRow = i + 1;
       oldStatus = String(rows[i][USERS_COLS.status]);
       oldRole = String(rows[i][USERS_COLS.role]);
@@ -3337,6 +3590,7 @@ function handleUsersUpdate(user, data) {
  * Clears session to force re-login with new password.
  */
 function handleUsersResetPassword(user, data) {
+  debugTrace("handleUsersResetPassword.start", { target: String(data.user_id || "") });
   // Access control
   if (user.role !== "super_admin" && user.role !== "admin_hosp") {
     return { success: false, error: "Access denied" };
@@ -3363,7 +3617,7 @@ function handleUsersResetPassword(user, data) {
   var foundRow = -1;
 
   for (var i = 1; i < rows.length; i++) {
-    if (rows[i][USERS_COLS.user_id] === targetUserId) {
+    if (String(rows[i][USERS_COLS.user_id]) === targetUserId) {
       foundRow = i + 1;
       break;
     }
@@ -3380,9 +3634,10 @@ function handleUsersResetPassword(user, data) {
   sheet.getRange(foundRow, USERS_COLS.password_salt + 1).setValue(newSalt);
   sheet.getRange(foundRow, USERS_COLS.session_token + 1).setValue("");
   sheet.getRange(foundRow, USERS_COLS.session_expires + 1).setValue("");
-  // Set force_change flag so user must change password on next login
+  // Set force_change only when admin didn't specify a password (auto-generated temp)
+  var wasAutoGenerated = !String(data.new_password || "").trim();
   if (sheet.getLastColumn() >= USERS_COLS.force_change + 1) {
-    sheet.getRange(foundRow, USERS_COLS.force_change + 1).setValue("Y");
+    sheet.getRange(foundRow, USERS_COLS.force_change + 1).setValue(wasAutoGenerated ? "Y" : "");
   }
 
   // Audit log
@@ -3390,7 +3645,7 @@ function handleUsersResetPassword(user, data) {
     action: "password_reset",
   });
 
-  return { success: true, data: { message: "Password reset" } };
+  return { success: true, data: { message: "Password reset", temp_password: newPassword } };
 }
 
 // ---------------------------------------------------------------------------
@@ -3431,6 +3686,7 @@ function handleSettingsGet(user) {
  * If telegram_test=true, sends a test message via Telegram Bot API.
  */
 function handleSettingsSave(user, data) {
+  debugTrace("handleSettingsSave.start");
   // Access control
   if (user.role !== "super_admin") {
     return { success: false, error: "Access denied: super_admin only" };

@@ -22,6 +22,7 @@ export interface LoginResponse {
 /** Register response from GAS */
 export interface RegisterResponse {
   message: string
+  auto_approved?: boolean
 }
 
 /** Paginated list response with metadata */

@@ -386,6 +386,23 @@
 
 ---
 
+## Phase 15: Frontend Debug Logging System
+
+**Checkpoint**: Debug toggle ใน Settings เปิด/ปิดได้, console แสดง color-coded logs เมื่อเปิด, ไม่มี overhead เมื่อปิด
+
+- [x] T179 [P] ติดตั้ง shadcn/ui Switch component — `npx shadcn@latest add switch` → `src/components/ui/switch.tsx`
+- [x] T180 [P] สร้าง `src/utils/debugLogger.ts` — ตัว logger กลางพร้อม categories (api/nav/state/user/error), color coding, timestamp, no-op when disabled, localStorage toggle (`telemed_debug_enabled`)
+- [x] T181 แก้ `src/services/api.ts` — เพิ่ม `debug.api()` / `debug.error()` ใน `gasGet` และ `gasPost` พร้อม token redaction + timing (`Date.now()`)
+- [x] T182 สร้าง `src/hooks/useDebugLog.ts` — `useDebugMount(name)`, `useDebugChange(label, value)`, `useDebugNav()` hooks
+- [x] T183 แก้ `src/modules/settings/SettingsPage.tsx` — เพิ่ม "Debug Logging" section พร้อม Switch toggle, localStorage persistence, cross-tab sync via StorageEvent
+- [x] T184 เพิ่ม `useDebugNav` ใน `AppLayout` + `useDebugMount` ใน Auth pages (LoginPage, RegisterPage)
+- [x] T185 เพิ่ม `useDebugMount` ใน Module 1-3 (EquipmentPage, ReadinessPage, SchedulePage)
+- [x] T186 เพิ่ม `useDebugMount` ใน Module 4-6 + Dashboard (ImportPage, DrugConfirmPage, FollowupPage, DashboardPage)
+- [x] T187 เพิ่ม `useDebugMount` ใน MasterDrugs, Users, Settings (MasterDrugPage, UsersPage, SettingsPage)
+- [x] T188 Vite build ผ่าน + ทดสอบ toggle เปิด/ปิด — `npx vite build` ✓ ไม่มี error
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -484,10 +501,11 @@ Phase 10: T112-T126  (Users + Settings)
 5. + Phase 10 (Settings+Users) → Admin management
 6. + Phase 11 (Polish) → Production-ready
 7. + Phase 14 (Frontend Fixes) → Design review fixes
+8. + Phase 15 (Debug Logging) → Dev debug system
 
 ### Estimated Scope
 
-- **Total tasks**: 162 (Phase 1-12: 136 + Phase 13: 16 + Phase 14: 9 + T130 still open)
+- **Total tasks**: 172 (Phase 1-12: 136 + Phase 13: 16 + Phase 14: 9 + Phase 15: 10 + T130 still open)
 - **MVP tasks** (Phases 1-3 + 5-8): ~101 tasks
 - **Post-MVP tasks** (Phases 4, 9-11): ~35 tasks
 - **Per user story**:

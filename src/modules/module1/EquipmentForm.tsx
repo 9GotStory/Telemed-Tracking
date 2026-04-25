@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Dialog,
@@ -22,6 +22,8 @@ import { useEquipmentSave } from './useEquipment'
 import { equipmentSchema, type EquipmentFormValues } from '@/services/equipmentService'
 import type { EquipmentWithHospName } from '@/types/equipment'
 import { useAuthStore } from '@/stores/authStore'
+import { HospCodeSelect } from '@/components/common/HospCodeSelect'
+import { useFacilitiesList } from '@/hooks/useFacilities'
 
 const SET_TYPES = [
   { value: 'A', label: 'ชุด A (Desktop + Camera + Mic)' },
@@ -92,10 +94,12 @@ export function EquipmentForm({ open, onOpenChange, equipment, defaultHospCode }
   const { user } = useAuthStore()
   const saveMutation = useEquipmentSave()
   const isEditing = !!equipment
+  const { data: facilities = [] } = useFacilitiesList()
 
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
     setValue,
     watch,
@@ -153,9 +157,17 @@ export function EquipmentForm({ open, onOpenChange, equipment, defaultHospCode }
           {canChooseHosp && (
             <div className="grid gap-2">
               <Label>สถานพยาบาล</Label>
-              <Input
-                placeholder="รหัสสถานพยาบาล 5 หลัก"
-                {...register('hosp_code')}
+              <Controller
+                name="hosp_code"
+                control={control}
+                render={({ field }) => (
+                  <HospCodeSelect
+                    value={field.value}
+                    onChange={field.onChange}
+                    items={facilities}
+                    placeholder="เลือกสถานพยาบาล"
+                  />
+                )}
               />
               {errors.hosp_code && (
                 <p role="alert" className="text-xs text-destructive">

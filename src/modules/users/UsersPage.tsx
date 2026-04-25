@@ -13,8 +13,10 @@ import { UserTable } from './UserTable'
 import { ApprovalForm } from './ApprovalForm'
 import { useUsersList } from './useUsers'
 import type { UserFilters, UserItem } from '@/services/usersService'
+import { useDebugMount } from '@/hooks/useDebugLog'
 
 export default function UsersPage() {
+  useDebugMount('UsersPage')
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [roleFilter, setRoleFilter] = useState<string>('')
   const [approveUser, setApproveUser] = useState<UserItem | null>(null)

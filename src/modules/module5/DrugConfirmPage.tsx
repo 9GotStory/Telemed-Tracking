@@ -15,8 +15,10 @@ import { PatientList } from './PatientList'
 import { useFacilitiesList } from '@/hooks/useFacilities'
 import { useAuthStore } from '@/stores/authStore'
 import { format } from 'date-fns'
+import { useDebugMount } from '@/hooks/useDebugLog'
 
 export default function DrugConfirmPage() {
+  useDebugMount('DrugConfirmPage')
   const { user } = useAuthStore()
   const today = format(new Date(), 'yyyy-MM-dd')
   const [serviceDate, setServiceDate] = useState(today)
@@ -73,7 +75,7 @@ export default function DrugConfirmPage() {
                   <SelectItem value="__all__">ทุกแห่ง</SelectItem>
                   {facilities.map((f) => (
                     <SelectItem key={f.hosp_code} value={f.hosp_code}>
-                      {f.hosp_name}
+                      {f.hosp_name} ({f.hosp_code})
                     </SelectItem>
                   ))}
                 </SelectContent>
