@@ -1,6 +1,7 @@
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -33,16 +34,18 @@ export function RoleSelector({ value, onValueChange }: RoleSelectorProps) {
   }
 
   return (
-    <Select value={value} onValueChange={handleValueChange}>
-      <SelectTrigger>
+    <Select value={value} onValueChange={handleValueChange} items={managed.map(role => ({ label: ROLE_LABELS[role] ?? role, value: role }))}>
+      <SelectTrigger className="w-full">
         <SelectValue placeholder="เลือกบทบาท" />
       </SelectTrigger>
       <SelectContent>
-        {managed.map((role) => (
-          <SelectItem key={role} value={role}>
-            {ROLE_LABELS[role] ?? role}
-          </SelectItem>
-        ))}
+        <SelectGroup>
+          {managed.map((role) => (
+            <SelectItem key={role} value={role}>
+              {ROLE_LABELS[role] ?? role}
+            </SelectItem>
+          ))}
+        </SelectGroup>
       </SelectContent>
     </Select>
   )

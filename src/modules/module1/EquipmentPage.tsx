@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -81,14 +82,16 @@ export default function EquipmentPage() {
 
         {/* Filters */}
         <div className="flex gap-2 items-center">
-          <Select value={statusFilter} onValueChange={(v) => { if (v) setStatusFilter(v) }}>
+          <Select value={statusFilter} onValueChange={(v) => { if (v) setStatusFilter(v) }} items={STATUS_FILTERS.map(f => ({ label: f.label, value: f.value }))}>
             <SelectTrigger className="w-40">
-              <SelectValue />
+              <SelectValue placeholder="ทุกสถานะ" />
             </SelectTrigger>
             <SelectContent>
-              {STATUS_FILTERS.map((f) => (
-                <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
-              ))}
+              <SelectGroup>
+                {STATUS_FILTERS.map((f) => (
+                  <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                ))}
+              </SelectGroup>
             </SelectContent>
           </Select>
           {user && (

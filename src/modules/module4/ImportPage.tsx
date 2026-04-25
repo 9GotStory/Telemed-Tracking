@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -152,16 +153,18 @@ export default function ImportPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-md border p-3">
             <div className="grid gap-1.5">
               <Label>รพ.สต.</Label>
-              <Select value={hospCode} onValueChange={(v) => { if (v) setHospCode(v) }}>
-                <SelectTrigger>
+              <Select value={hospCode} onValueChange={(v) => { if (v) setHospCode(v) }} items={facilities.map(f => ({ label: `${f.hosp_name} (${f.hosp_code})`, value: f.hosp_code }))}>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="เลือก รพ.สต." />
                 </SelectTrigger>
                 <SelectContent>
-                  {facilities.map((f) => (
-                    <SelectItem key={f.hosp_code} value={f.hosp_code}>
-                      {f.hosp_name} ({f.hosp_code})
-                    </SelectItem>
-                  ))}
+                  <SelectGroup>
+                    {facilities.map((f) => (
+                      <SelectItem key={f.hosp_code} value={f.hosp_code}>
+                        {f.hosp_name} ({f.hosp_code})
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 </SelectContent>
               </Select>
             </div>
@@ -175,14 +178,16 @@ export default function ImportPage() {
             </div>
             <div className="grid gap-1.5">
               <Label>ประเภทคลินิก</Label>
-              <Select value={clinicType} onValueChange={(v) => { if (v) setClinicType(v) }}>
-                <SelectTrigger>
+              <Select value={clinicType} onValueChange={(v) => { if (v) setClinicType(v) }} items={CLINIC_TYPES.map(ct => ({ label: ct.label, value: ct.value }))}>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="เลือกประเภท" />
                 </SelectTrigger>
                 <SelectContent>
-                  {CLINIC_TYPES.map((ct) => (
-                    <SelectItem key={ct.value} value={ct.value}>{ct.label}</SelectItem>
-                  ))}
+                  <SelectGroup>
+                    {CLINIC_TYPES.map((ct) => (
+                      <SelectItem key={ct.value} value={ct.value}>{ct.label}</SelectItem>
+                    ))}
+                  </SelectGroup>
                 </SelectContent>
               </Select>
             </div>

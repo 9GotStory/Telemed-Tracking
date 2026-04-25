@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -187,14 +188,17 @@ export function EquipmentForm({ open, onOpenChange, equipment, defaultHospCode }
                 setValue('set_type', v as 'A' | 'B', { shouldValidate: true })
                 if (v === 'B') setValue('device_type', 'notebook', { shouldValidate: true })
               }}
+              items={SET_TYPES.map(t => ({ label: t.label, value: t.value }))}
             >
-              <SelectTrigger aria-label="ชุดอุปกรณ์">
+              <SelectTrigger className="w-full" aria-label="ชุดอุปกรณ์">
                 <SelectValue placeholder="เลือกชุด" />
               </SelectTrigger>
               <SelectContent>
-                {SET_TYPES.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                ))}
+                <SelectGroup>
+                  {SET_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
             {errors.set_type && (
@@ -214,14 +218,17 @@ export function EquipmentForm({ open, onOpenChange, equipment, defaultHospCode }
                 setValue('device_type', v as EquipmentFormValues['device_type'], { shouldValidate: true })
               }}
               disabled={currentSetType === 'B'}
+              items={DEVICE_TYPES.map(d => ({ label: d.label, value: d.value }))}
             >
-              <SelectTrigger aria-label="ประเภทอุปกรณ์">
+              <SelectTrigger className="w-full" aria-label="ประเภทอุปกรณ์">
                 <SelectValue placeholder="เลือกประเภท" />
               </SelectTrigger>
               <SelectContent>
-                {DEVICE_TYPES.map((d) => (
-                  <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
-                ))}
+                <SelectGroup>
+                  {DEVICE_TYPES.map((d) => (
+                    <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
             {errors.device_type && (
@@ -244,14 +251,17 @@ export function EquipmentForm({ open, onOpenChange, equipment, defaultHospCode }
                 if (!v) return
                 setValue('status', v as 'ready' | 'maintenance' | 'broken', { shouldValidate: true })
               }}
+              items={STATUSES.map(s => ({ label: s.label, value: s.value }))}
             >
-              <SelectTrigger aria-label="สถานะ">
+              <SelectTrigger className="w-full" aria-label="สถานะ">
                 <SelectValue placeholder="เลือกสถานะ" />
               </SelectTrigger>
               <SelectContent>
-                {STATUSES.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                ))}
+                <SelectGroup>
+                  {STATUSES.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
             {errors.status && (

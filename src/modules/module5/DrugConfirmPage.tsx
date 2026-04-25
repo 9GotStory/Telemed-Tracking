@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -67,17 +68,19 @@ export default function DrugConfirmPage() {
           {user?.role !== 'staff_hsc' && (
             <div className="grid gap-1.5">
               <Label>รพ.สต.</Label>
-              <Select value={hospCode} onValueChange={(v) => { if (v) setHospCode(v) }}>
-                <SelectTrigger>
+              <Select value={hospCode || '__all__'} onValueChange={(v) => { if (v) setHospCode(v === '__all__' ? '' : v) }} items={[{ label: 'ทุกแห่ง', value: '__all__' }, ...facilities.map(f => ({ label: `${f.hosp_name} (${f.hosp_code})`, value: f.hosp_code }))]}>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="ทุกแห่ง" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">ทุกแห่ง</SelectItem>
-                  {facilities.map((f) => (
-                    <SelectItem key={f.hosp_code} value={f.hosp_code}>
-                      {f.hosp_name} ({f.hosp_code})
-                    </SelectItem>
-                  ))}
+                  <SelectGroup>
+                    <SelectItem value="__all__">ทุกแห่ง</SelectItem>
+                    {facilities.map((f) => (
+                      <SelectItem key={f.hosp_code} value={f.hosp_code}>
+                        {f.hosp_name} ({f.hosp_code})
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 </SelectContent>
               </Select>
             </div>

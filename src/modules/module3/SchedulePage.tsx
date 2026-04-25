@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -120,15 +121,17 @@ export default function SchedulePage() {
           </div>
 
           {/* Clinic type filter */}
-          <Select value={clinicFilter} onValueChange={(v) => { if (v) setClinicFilter(v) }}>
+          <Select value={clinicFilter} onValueChange={(v) => { if (v) setClinicFilter(v) }} items={[{ label: 'ทุกประเภท', value: 'all' }, ...CLINIC_TYPES.map(ct => ({ label: ct.label, value: ct.value }))]}>
             <SelectTrigger className="w-44 ml-auto">
-              <SelectValue />
+              <SelectValue placeholder="ทุกประเภท" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">ทุกประเภท</SelectItem>
-              {CLINIC_TYPES.map((ct) => (
-                <SelectItem key={ct.value} value={ct.value}>{ct.label}</SelectItem>
-              ))}
+              <SelectGroup>
+                <SelectItem value="all">ทุกประเภท</SelectItem>
+                {CLINIC_TYPES.map((ct) => (
+                  <SelectItem key={ct.value} value={ct.value}>{ct.label}</SelectItem>
+                ))}
+              </SelectGroup>
             </SelectContent>
           </Select>
         </div>

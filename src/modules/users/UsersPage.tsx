@@ -5,6 +5,7 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -49,27 +50,31 @@ export default function UsersPage() {
 
         {/* Filters */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Select value={statusFilter || '__all__'} onValueChange={(v) => { if (v) setStatusFilter(v) }}>
-            <SelectTrigger>
+          <Select value={statusFilter || '__all__'} onValueChange={(v) => { if (v) setStatusFilter(v === '__all__' ? '' : v) }} items={[{ label: 'ทุกสถานะ', value: '__all__' }, { label: 'รออนุมัติ', value: 'pending' }, { label: 'ใช้งานอยู่', value: 'active' }, { label: 'ระงับ', value: 'inactive' }]}>
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="ทุกสถานะ" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__all__">ทุกสถานะ</SelectItem>
-              <SelectItem value="pending">รออนุมัติ</SelectItem>
-              <SelectItem value="active">ใช้งานอยู่</SelectItem>
-              <SelectItem value="inactive">ระงับ</SelectItem>
+              <SelectGroup>
+                <SelectItem value="__all__">ทุกสถานะ</SelectItem>
+                <SelectItem value="pending">รออนุมัติ</SelectItem>
+                <SelectItem value="active">ใช้งานอยู่</SelectItem>
+                <SelectItem value="inactive">ระงับ</SelectItem>
+              </SelectGroup>
             </SelectContent>
           </Select>
-          <Select value={roleFilter || '__all__'} onValueChange={(v) => { if (v) setRoleFilter(v) }}>
-            <SelectTrigger>
+          <Select value={roleFilter || '__all__'} onValueChange={(v) => { if (v) setRoleFilter(v === '__all__' ? '' : v) }} items={[{ label: 'ทุกบทบาท', value: '__all__' }, { label: 'Super Admin', value: 'super_admin' }, { label: 'Admin รพ.', value: 'admin_hosp' }, { label: 'จนท. รพ.', value: 'staff_hosp' }, { label: 'จนท. รพ.สต.', value: 'staff_hsc' }]}>
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="ทุกบทบาท" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__all__">ทุกบทบาท</SelectItem>
-              <SelectItem value="super_admin">Super Admin</SelectItem>
-              <SelectItem value="admin_hosp">Admin รพ.</SelectItem>
-              <SelectItem value="staff_hosp">จนท. รพ.</SelectItem>
-              <SelectItem value="staff_hsc">จนท. รพ.สต.</SelectItem>
+              <SelectGroup>
+                <SelectItem value="__all__">ทุกบทบาท</SelectItem>
+                <SelectItem value="super_admin">Super Admin</SelectItem>
+                <SelectItem value="admin_hosp">Admin รพ.</SelectItem>
+                <SelectItem value="staff_hosp">จนท. รพ.</SelectItem>
+                <SelectItem value="staff_hsc">จนท. รพ.สต.</SelectItem>
+              </SelectGroup>
             </SelectContent>
           </Select>
         </div>

@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -142,14 +143,17 @@ export function ScheduleForm({ open, onOpenChange, schedule, defaultHospCode, de
               onValueChange={(v) => {
                 if (v) setValue('clinic_type', v, { shouldValidate: true })
               }}
+              items={CLINIC_TYPES.map(ct => ({ label: ct.label, value: ct.value }))}
             >
-              <SelectTrigger aria-label="ประเภทคลินิก">
+              <SelectTrigger className="w-full" aria-label="ประเภทคลินิก">
                 <SelectValue placeholder="เลือกประเภท" />
               </SelectTrigger>
               <SelectContent>
-                {CLINIC_TYPES.map((ct) => (
-                  <SelectItem key={ct.value} value={ct.value}>{ct.label}</SelectItem>
-                ))}
+                <SelectGroup>
+                  {CLINIC_TYPES.map((ct) => (
+                    <SelectItem key={ct.value} value={ct.value}>{ct.label}</SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
             {errors.clinic_type && (

@@ -3,6 +3,7 @@ import { PageWrapper } from '@/components/layout/PageWrapper'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -42,27 +43,31 @@ export default function FollowupPage() {
 
         {/* Filters */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Select value={statusFilter || '__all__'} onValueChange={(v) => { if (v) setStatusFilter(v) }}>
-            <SelectTrigger>
+          <Select value={statusFilter || '__all__'} onValueChange={(v) => { if (v) setStatusFilter(v === '__all__' ? '' : v) }} items={[{ label: 'ทุกสถานะ', value: '__all__' }, { label: 'รอติดตาม', value: 'pending' }, { label: 'ติดตามแล้ว', value: 'followed' }]}>
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="สถานะ" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__all__">ทุกสถานะ</SelectItem>
-              <SelectItem value="pending">รอติดตาม</SelectItem>
-              <SelectItem value="followed">ติดตามแล้ว</SelectItem>
+              <SelectGroup>
+                <SelectItem value="__all__">ทุกสถานะ</SelectItem>
+                <SelectItem value="pending">รอติดตาม</SelectItem>
+                <SelectItem value="followed">ติดตามแล้ว</SelectItem>
+              </SelectGroup>
             </SelectContent>
           </Select>
-          <Select value={hospCodeFilter || '__all__'} onValueChange={(v) => { if (v) setHospCodeFilter(v) }}>
-            <SelectTrigger>
+          <Select value={hospCodeFilter || '__all__'} onValueChange={(v) => { if (v) setHospCodeFilter(v === '__all__' ? '' : v) }} items={[{ label: 'ทุกแห่ง', value: '__all__' }, ...facilities.map(f => ({ label: `${f.hosp_name} (${f.hosp_code})`, value: f.hosp_code }))]}>
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="ทุกแห่ง" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__all__">ทุกแห่ง</SelectItem>
-              {facilities.map((f) => (
-                <SelectItem key={f.hosp_code} value={f.hosp_code}>
-                  {f.hosp_name} ({f.hosp_code})
-                </SelectItem>
-              ))}
+              <SelectGroup>
+                <SelectItem value="__all__">ทุกแห่ง</SelectItem>
+                {facilities.map((f) => (
+                  <SelectItem key={f.hosp_code} value={f.hosp_code}>
+                    {f.hosp_name} ({f.hosp_code})
+                  </SelectItem>
+                ))}
+              </SelectGroup>
             </SelectContent>
           </Select>
           <div className="relative">

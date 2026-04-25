@@ -1,6 +1,7 @@
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -17,6 +18,7 @@ interface HospCodeSelectProps {
   items: HospCodeItem[]
   placeholder?: string
   disabled?: boolean
+  className?: string
 }
 
 /**
@@ -37,22 +39,26 @@ export function HospCodeSelect({
   items,
   placeholder = 'เลือกสถานพยาบาล',
   disabled = false,
+  className,
 }: HospCodeSelectProps) {
   return (
     <Select
       value={value}
       onValueChange={(v) => { if (v) onChange(v) }}
       disabled={disabled}
+      items={items.map(item => ({ label: `${item.hosp_name} (${item.hosp_code})`, value: item.hosp_code }))}
     >
-      <SelectTrigger>
+      <SelectTrigger className={className ?? 'w-full'}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
-        {items.map((item) => (
-          <SelectItem key={item.hosp_code} value={item.hosp_code}>
-            {item.hosp_name} ({item.hosp_code})
-          </SelectItem>
-        ))}
+        <SelectGroup>
+          {items.map((item) => (
+            <SelectItem key={item.hosp_code} value={item.hosp_code}>
+              {item.hosp_name} ({item.hosp_code})
+            </SelectItem>
+          ))}
+        </SelectGroup>
       </SelectContent>
     </Select>
   )

@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -83,14 +84,16 @@ export default function MasterDrugPage() {
 
         {/* Filters */}
         <div className="flex gap-2 items-center">
-          <Select value={activeFilter} onValueChange={(v) => { if (v) setActiveFilter(v) }}>
+          <Select value={activeFilter} onValueChange={(v) => { if (v) setActiveFilter(v) }} items={ACTIVE_FILTERS.map(f => ({ label: f.label, value: f.value }))}>
             <SelectTrigger className="w-32" aria-label="กรองตามสถานะ">
-              <SelectValue />
+              <SelectValue placeholder="ทั้งหมด" />
             </SelectTrigger>
             <SelectContent>
-              {ACTIVE_FILTERS.map((f) => (
-                <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
-              ))}
+              <SelectGroup>
+                {ACTIVE_FILTERS.map((f) => (
+                  <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                ))}
+              </SelectGroup>
             </SelectContent>
           </Select>
           <div className="relative flex-1 max-w-xs">
