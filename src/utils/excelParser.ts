@@ -1,3 +1,8 @@
+/** VN format: 12 digits (YYMMDDHHmmSS) */
+const VN_REGEX = /^\d{12}$/
+/** HN format: 6 digits */
+const HN_REGEX = /^\d{6}$/
+
 /** Expected column headers in HosXP Excel export */
 const REQUIRED_COLUMNS = ['vn', 'hn', 'patient_name', 'dob', 'tel', 'drug_name', 'strength', 'qty', 'unit', 'sig'] as const
 
@@ -49,6 +54,8 @@ export interface ParseResult {
   errors: string[]
   totalRows: number
   uniqueVNs: number
+  /** Rows that failed VN/HN format validation, keyed by row index */
+  invalidRows: Record<number, string[]>
 }
 
 /**
@@ -59,19 +66,20 @@ export interface ParseResult {
  */
 export async function parseHosXPExport(arrayBuffer: ArrayBuffer): Promise<ParseResult> {
   const errors: string[] = []
+  const invalidRows: Record<number, string[]> = {}
 
   const XLSX = await import('xlsx')
   const workbook = XLSX.read(arrayBuffer, { type: 'array' })
   const sheetName = workbook.SheetNames[0]
   if (!sheetName) {
-    return { rows: [], groupedByVN: {}, errors: ['ไม่พบ sheet ในไฟล์ Excel'], totalRows: 0, uniqueVNs: 0 }
+    return { rows: [], groupedByVN: {}, errors: ['ไม่พบ sheet ในไฟล์ Excel'], totalRows: 0, uniqueVNs: 0, invalidRows }
   }
 
   const sheet = workbook.Sheets[sheetName]
   const rawData: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet, { defval: '' })
 
   if (rawData.length === 0) {
-    return { rows: [], groupedByVN: {}, errors: ['ไม่พบข้อมูลใน sheet'], totalRows: 0, uniqueVNs: 0 }
+    return { rows: [], groupedByVN: {}, errors: ['ไม่พบข้อมูลใน sheet'], totalRows: 0, uniqueVNs: 0, invalidRows }
   }
 
   // Normalize headers
@@ -86,17 +94,36 @@ export async function parseHosXPExport(arrayBuffer: ArrayBuffer): Promise<ParseR
   }
 
   if (errors.length > 0) {
-    return { rows: [], groupedByVN: {}, errors, totalRows: rawData.length, uniqueVNs: 0 }
+    return { rows: [], groupedByVN: {}, errors, totalRows: rawData.length, uniqueVNs: 0, invalidRows }
   }
 
-  // Parse rows
+  // Parse rows with required field + format validation
   const rows: ParsedRow[] = []
   for (let i = 0; i < rawData.length; i++) {
-    const raw = rawData[i]
-    const mapped = mapRow(raw, headerMapping)
-    if (mapped) {
-      rows.push(mapped)
+    const mapped = mapRow(rawData[i], headerMapping)
+    if (!mapped) continue
+
+    const rowErrors: string[] = []
+
+    // Required field checks
+    if (!mapped.vn) {
+      rowErrors.push('VN ว่าง')
+    } else if (!VN_REGEX.test(mapped.vn)) {
+      rowErrors.push(`VN "${mapped.vn}" ไม่ตรงตามรูปแบบ 12 หลัก (YYMMDDHHmmSS)`)
     }
+    if (!mapped.hn) {
+      rowErrors.push('HN ว่าง')
+    } else if (!HN_REGEX.test(mapped.hn)) {
+      rowErrors.push(`HN "${mapped.hn}" ไม่ตรงตามรูปแบบ 6 หลัก`)
+    }
+    if (!mapped.patient_name) rowErrors.push('ชื่อ-สกุล ว่าง')
+    if (!mapped.drug_name) rowErrors.push('ชื่อยา ว่าง')
+    if (!mapped.qty || mapped.qty <= 0) rowErrors.push('จำนวนต้องมากกว่า 0')
+
+    if (rowErrors.length > 0) {
+      invalidRows[i] = rowErrors
+    }
+    rows.push(mapped)
   }
 
   // Group by VN
@@ -114,6 +141,7 @@ export async function parseHosXPExport(arrayBuffer: ArrayBuffer): Promise<ParseR
     errors,
     totalRows: rows.length,
     uniqueVNs: Object.keys(groupedByVN).length,
+    invalidRows,
   }
 }
 

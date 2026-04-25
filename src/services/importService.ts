@@ -16,8 +16,8 @@ const visitDrugSchema = z.object({
 
 /** A single visit (one VN) with its drug list */
 const visitRowSchema = z.object({
-  vn: z.string().min(1),
-  hn: z.string(),
+  vn: z.string().regex(/^\d{12}$/, 'VN ต้องเป็นตัวเลข 12 หลัก (YYMMDDHHmmSS)'),
+  hn: z.string().regex(/^\d{6}$/, 'HN ต้องเป็นตัวเลข 6 หลัก'),
   patient_name: z.string().min(1),
   dob: z.string(),
   tel: z.string(),

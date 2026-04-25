@@ -7,9 +7,11 @@ interface PreviewTableProps {
   rows: ParsedRow[]
   groupedByVN: Record<string, ParsedRow[]>
   previewResult: ImportPreviewResponse | null
+  invalidRows?: Record<number, string[]>
 }
 
-export function PreviewTable({ rows, groupedByVN, previewResult }: PreviewTableProps) {
+export function PreviewTable({ rows, groupedByVN, previewResult, invalidRows = {} }: PreviewTableProps) {
+  // VNs with errors from backend preview (step 3)
   const errorVNs = useMemo(() => {
     if (!previewResult) return new Set<string>()
     return new Set(previewResult.errors.map((e) => e.vn))
@@ -19,6 +21,23 @@ export function PreviewTable({ rows, groupedByVN, previewResult }: PreviewTableP
     if (!previewResult) return new Map<string, string>()
     return new Map(previewResult.errors.map((e) => [e.vn, e.error]))
   }, [previewResult])
+
+  // VNs with errors from frontend parsing (step 2+)
+  const invalidVNs = useMemo(() => {
+    const set = new Set<string>()
+    const idxArr = Object.keys(invalidRows).map(Number)
+    for (const idx of idxArr) {
+      const row = rows[idx]
+      if (row?.vn) set.add(row.vn)
+    }
+    return set
+  }, [invalidRows, rows])
+
+  const allErrorVNs = useMemo(() => {
+    const merged = new Set(errorVNs)
+    for (const vn of invalidVNs) merged.add(vn)
+    return merged
+  }, [errorVNs, invalidVNs])
 
   const drugCountByVN = useMemo(() => {
     const map = new Map<string, number>()
@@ -44,7 +63,7 @@ export function PreviewTable({ rows, groupedByVN, previewResult }: PreviewTableP
         </thead>
         <tbody>
           {Object.entries(groupedByVN).map(([vn, vRows]) => {
-            const isError = errorVNs.has(vn)
+            const isError = allErrorVNs.has(vn)
             const errorMsg = errorByVN.get(vn)
             const firstRow = vRows[0]
 

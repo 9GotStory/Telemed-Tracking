@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
+import { format } from 'date-fns'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -11,16 +11,16 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import { DatePicker } from '@/components/common/DatePicker'
 import { ExcelUploader } from './ExcelUploader'
 import { PreviewTable } from './PreviewTable'
 import { ImportSummary } from './ImportSummary'
 import { useImportPreview, useImportConfirm } from './useImport'
 import { CLINIC_TYPES } from '@/constants/clinicTypes'
 import type { ParsedRow, ParseResult } from '@/utils/excelParser'
-import type { ImportPreviewRequest } from '@/services/importService'
 import { useAuthStore } from '@/stores/authStore'
 import { useFacilitiesList } from '@/hooks/useFacilities'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Info } from 'lucide-react'
 import { useDebugMount } from '@/hooks/useDebugLog'
 
 type Step = 1 | 2 | 3
@@ -30,8 +30,8 @@ export default function ImportPage() {
   const { user } = useAuthStore()
   const [step, setStep] = useState<Step>(1)
   const [parseResult, setParseResult] = useState<ParseResult | null>(null)
-  const [hospCode, setHospCode] = useState(user?.hosp_code ?? '')
-  const [serviceDate, setServiceDate] = useState('')
+  const [hospCode, setHospCode] = useState(user?.role === 'staff_hsc' ? (user.hosp_code ?? '') : '')
+  const [serviceDate, setServiceDate] = useState<Date | undefined>(undefined)
   const [clinicType, setClinicType] = useState('')
 
   const previewMutation = useImportPreview()
@@ -39,51 +39,21 @@ export default function ImportPage() {
 
   const { data: facilities = [] } = useFacilitiesList()
 
+  // Derive date string from Date object
+  const serviceDateStr = serviceDate ? format(serviceDate, 'yyyy-MM-dd') : ''
+
   // Group by VN for display
   const groupedByVN = useMemo(() => {
     if (!parseResult) return {} as Record<string, ParsedRow[]>
     return parseResult.groupedByVN
   }, [parseResult])
 
-  const canGoToStep3 = hospCode !== '' && serviceDate !== '' && clinicType !== ''
+  const canGoToStep3 = hospCode !== '' && serviceDateStr !== '' && clinicType !== ''
 
-  const handlePreview = () => {
-    if (!parseResult) return
-
-    const visits = Object.entries(groupedByVN).map(([vn, rows]) => ({
-      vn,
-      hn: rows[0].hn,
-      patient_name: rows[0].patient_name,
-      dob: rows[0].dob,
-      tel: rows[0].tel,
-      drugs: rows.map((r) => ({
-        drug_name: r.drug_name,
-        strength: r.strength,
-        qty: r.qty,
-        unit: r.unit,
-        sig: r.sig,
-      })),
-    }))
-
-    const data: ImportPreviewRequest = {
-      round: 1,
-      hosp_code: hospCode,
-      service_date: serviceDate,
-      clinic_type: clinicType,
-      visits,
-    }
-
-    previewMutation.mutate(data, {
-      onSuccess: () => setStep(3),
-    })
-  }
-
-  const handleConfirm = () => {
-    if (!parseResult || !previewMutation.data) return
-
-    const validVNs = new Set(previewMutation.data.valid.map((v) => v.vn))
-    const visits = Object.entries(groupedByVN)
-      .filter(([vn]) => validVNs.has(vn))
+  // Build visits payload from grouped rows (optionally filtered by VN set)
+  const buildVisits = (vnFilter?: Set<string>) =>
+    Object.entries(groupedByVN)
+      .filter(([vn]) => !vnFilter || vnFilter.has(vn))
       .map(([vn, rows]) => ({
         vn,
         hn: rows[0].hn,
@@ -99,18 +69,44 @@ export default function ImportPage() {
         })),
       }))
 
+  const handlePreview = () => {
+    if (!parseResult) return
+
+    previewMutation.mutate(
+      {
+        round: 1,
+        hosp_code: hospCode,
+        service_date: serviceDateStr,
+        clinic_type: clinicType,
+        visits: buildVisits(),
+      },
+      {
+        onSuccess: () => setStep(3),
+      },
+    )
+  }
+
+  const handleConfirm = () => {
+    if (!parseResult || !previewMutation.data) return
+
+    const validVNs = new Set(previewMutation.data.valid.map((v) => v.vn))
+
     confirmMutation.mutate(
       {
         round: 1,
         hosp_code: hospCode,
-        service_date: serviceDate,
+        service_date: serviceDateStr,
         clinic_type: clinicType,
-        visits,
+        visits: buildVisits(validVNs),
       },
       {
         onSuccess: () => {
           setStep(1)
           setParseResult(null)
+          setServiceDate(undefined)
+          setClinicType('')
+          previewMutation.reset()
+          if (user?.role !== 'staff_hsc') setHospCode('')
         },
       },
     )
@@ -126,6 +122,45 @@ export default function ImportPage() {
             นำเข้าข้อมูลจาก HosXP Excel export
           </p>
         </div>
+
+        {/* Import guide */}
+        {step === 1 && (
+          <div className="rounded-md border bg-btn-default-light/30 p-3 grid gap-2 text-sm">
+            <div className="flex items-center gap-2 font-medium">
+              <Info className="h-4 w-4 text-apple-blue shrink-0" />
+              รูปแบบไฟล์ที่รองรับ
+            </div>
+            <p className="text-muted-foreground text-xs pl-6">
+              ไฟล์ Excel (.xlsx, .xls) ที่ export จาก HosXP โดยมีคอลัมน์ดังนี้:
+            </p>
+            <div className="pl-6 overflow-x-auto">
+              <table className="text-xs">
+                <thead>
+                  <tr className="text-left text-muted-foreground">
+                    <th className="pr-4 py-1 font-medium">คอลัมน์</th>
+                    <th className="pr-4 py-1 font-medium">Header ที่รองรับ</th>
+                    <th className="py-1 font-medium">ตัวอย่าง</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  <tr><td className="pr-4 py-1 font-medium text-foreground">VN *</td><td className="pr-4 py-1 text-muted-foreground">vn, VN</td><td className="py-1 text-muted-foreground">ตัวเลข 12 หลัก <span className="font-mono">690425231611</span></td></tr>
+                  <tr><td className="pr-4 py-1 font-medium text-foreground">HN *</td><td className="pr-4 py-1 text-muted-foreground">hn, HN</td><td className="py-1 text-muted-foreground">ตัวเลข 6 หลัก <span className="font-mono">000001</span></td></tr>
+                  <tr><td className="pr-4 py-1 font-medium text-foreground">ชื่อ-สกุล *</td><td className="pr-4 py-1 text-muted-foreground">ชื่อ-สกุล, ชื่อ สกุล, ชื่อ-นามสกุล</td><td className="py-1 text-muted-foreground">สมชาย ใจดี</td></tr>
+                  <tr><td className="pr-4 py-1 text-muted-foreground">วันเกิด</td><td className="pr-4 py-1 text-muted-foreground">วันเกิด, dob, DOB</td><td className="py-1 text-muted-foreground">2523-01-15</td></tr>
+                  <tr><td className="pr-4 py-1 text-muted-foreground">เบอร์โทร</td><td className="pr-4 py-1 text-muted-foreground">เบอร์โทร, tel, Tel</td><td className="py-1 text-muted-foreground">0812345678</td></tr>
+                  <tr><td className="pr-4 py-1 font-medium text-foreground">ชื่อยา *</td><td className="pr-4 py-1 text-muted-foreground">ชื่อยา, drug_name, Drug</td><td className="py-1 text-muted-foreground">Paracetamol</td></tr>
+                  <tr><td className="pr-4 py-1 text-muted-foreground">ความแรง</td><td className="pr-4 py-1 text-muted-foreground">ความแรง, strength</td><td className="py-1 text-muted-foreground">500 mg</td></tr>
+                  <tr><td className="pr-4 py-1 font-medium text-foreground">จำนวน *</td><td className="pr-4 py-1 text-muted-foreground">จำนวน, qty</td><td className="py-1 text-muted-foreground">ตัวเลข ≥ 1</td></tr>
+                  <tr><td className="pr-4 py-1 text-muted-foreground">หน่วย</td><td className="pr-4 py-1 text-muted-foreground">หน่วย, unit</td><td className="py-1 text-muted-foreground">เม็ด</td></tr>
+                  <tr><td className="pr-4 py-1 text-muted-foreground">วิธีใช้</td><td className="pr-4 py-1 text-muted-foreground">วิธีใช้, sig</td><td className="py-1 text-muted-foreground">1x3 หลังอาหาร</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-muted-foreground pl-6">
+              * คอลัมน์ที่จำเป็น — ผู้ป่วย 1 คน (VN เดียวกัน) สามารถมีได้หลายบรรทัด
+            </p>
+          </div>
+        )}
 
         {/* Step indicator */}
         <div className="flex items-center gap-2 text-sm">
@@ -170,10 +205,10 @@ export default function ImportPage() {
             </div>
             <div className="grid gap-1.5">
               <Label>วันที่ให้บริการ</Label>
-              <Input
-                type="date"
+              <DatePicker
                 value={serviceDate}
-                onChange={(e) => setServiceDate(e.target.value)}
+                onChange={setServiceDate}
+                placeholder="เลือกวันที่"
               />
             </div>
             <div className="grid gap-1.5">
@@ -211,6 +246,7 @@ export default function ImportPage() {
               rows={parseResult.rows}
               groupedByVN={groupedByVN}
               previewResult={null}
+              invalidRows={parseResult.invalidRows}
             />
             <div className="flex items-center justify-between">
               <Button variant="outline" onClick={() => setStep(1)}>
@@ -235,6 +271,7 @@ export default function ImportPage() {
               rows={parseResult.rows}
               groupedByVN={groupedByVN}
               previewResult={previewMutation.data ?? null}
+              invalidRows={parseResult.invalidRows}
             />
             <ImportSummary
               summary={previewMutation.data ?? null}

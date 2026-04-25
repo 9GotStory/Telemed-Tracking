@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Upload, FileSpreadsheet, AlertCircle } from 'lucide-react'
 import type { ParseResult } from '@/utils/excelParser'
 import { parseHosXPExport } from '@/utils/excelParser'
@@ -8,6 +8,7 @@ interface ExcelUploaderProps {
 }
 
 export function ExcelUploader({ onParsed }: ExcelUploaderProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [fileName, setFileName] = useState<string | null>(null)
   const [parseErrors, setParseErrors] = useState<string[]>([])
@@ -25,8 +26,13 @@ export function ExcelUploader({ onParsed }: ExcelUploaderProps) {
       reader.onload = async (e) => {
         const arrayBuffer = e.target?.result as ArrayBuffer
         const result = await parseHosXPExport(arrayBuffer)
-        if (result.errors.length > 0) {
-          setParseErrors(result.errors)
+        const allErrors = [...result.errors]
+        Object.entries(result.invalidRows).forEach(([idx, errs]) => {
+          const rowNum = Number(idx) + 2 // +1 for 0-based, +1 for header row
+          allErrors.push(`แถว ${rowNum}: ${errs.join(', ')}`)
+        })
+        if (allErrors.length > 0) {
+          setParseErrors(allErrors)
         }
         onParsed(result)
       }
@@ -75,10 +81,10 @@ export function ExcelUploader({ onParsed }: ExcelUploaderProps) {
           rounded-lg border-2 border-dashed p-8 text-center cursor-pointer transition-colors
           ${isDragging ? 'border-apple-blue bg-apple-blue/5' : 'border-border hover:border-apple-blue/50'}
         `}
-        onClick={() => document.getElementById('excel-file-input')?.click()}
+        onClick={() => fileInputRef.current?.click()}
       >
         <input
-          id="excel-file-input"
+          ref={fileInputRef}
           type="file"
           accept=".xlsx,.xls"
           onChange={handleInputChange}
