@@ -13,10 +13,11 @@ const scheduleKeys = {
  * Fetch schedule list with optional filters.
  * Automatically filtered by role on GAS side.
  */
-export function useScheduleList(filters: ScheduleFilters = {}) {
+export function useScheduleList(filters: ScheduleFilters = {}, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: scheduleKeys.list(filters),
     queryFn: () => scheduleService.list(filters),
+    enabled: options?.enabled ?? true,
   })
 }
 

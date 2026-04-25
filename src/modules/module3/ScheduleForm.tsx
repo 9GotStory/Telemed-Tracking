@@ -1,6 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo, useCallback } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { format, parseISO } from 'date-fns'
 import {
   Dialog,
   DialogContent,
@@ -24,7 +25,26 @@ import { CLINIC_TYPES } from '@/constants/clinicTypes'
 import type { ClinicScheduleWithActual } from '@/types/schedule'
 import { useAuthStore } from '@/stores/authStore'
 import { HospCodeSelect } from '@/components/common/HospCodeSelect'
-import { useFacilitiesList } from '@/hooks/useFacilities'
+import { FormChecklistCard, type ChecklistField } from '@/components/common/FormChecklistCard'
+import { DatePicker } from '@/components/common/DatePicker'
+import { useHospitalsList } from '@/hooks/useHospitals'
+
+// Half-hour intervals from 08:00 to 16:30
+const TIME_OPTIONS = Array.from({ length: 18 }, (_, i) => {
+  const hour = Math.floor(i / 2) + 8
+  const min = i % 2 === 0 ? '00' : '30'
+  return { value: `${String(hour).padStart(2, '0')}.${min}`, label: `${String(hour).padStart(2, '0')}.${min}` }
+})
+
+const TIME_ITEMS = TIME_OPTIONS.map(t => ({ label: t.label, value: t.value }))
+
+/** Parse "09.00-10.00" into [start, end] */
+function parseServiceTime(t: string): [string, string] {
+  if (!t) return ['', '']
+  if (!t.includes('-')) return [t, '']
+  const [start, end] = t.split('-')
+  return [start, end]
+}
 
 function getFormDefaults(
   schedule: ClinicScheduleWithActual | null | undefined,
@@ -61,7 +81,7 @@ export function ScheduleForm({ open, onOpenChange, schedule, defaultHospCode, de
   const { user } = useAuthStore()
   const saveMutation = useScheduleSave()
   const isEditing = !!schedule
-  const { data: facilities = [] } = useFacilitiesList()
+  const { data: hospitals = [] } = useHospitalsList()
 
   const {
     register,
@@ -93,6 +113,57 @@ export function ScheduleForm({ open, onOpenChange, schedule, defaultHospCode, de
 
   const canChooseHosp = user?.role === 'admin_hosp' || user?.role === 'super_admin'
 
+  // Service date: DatePicker uses Date, form stores 'yyyy-MM-dd' string
+  const serviceDateStr = watch('service_date') ?? ''
+  const serviceDateObj = useMemo(() => {
+    if (!serviceDateStr) return undefined
+    try { return parseISO(serviceDateStr) } catch { return undefined }
+  }, [serviceDateStr])
+
+  const handleDateChange = useCallback((date: Date | undefined) => {
+    if (date) {
+      setValue('service_date', format(date, 'yyyy-MM-dd'), { shouldValidate: true })
+    }
+  }, [setValue])
+
+  // Watched fields for checklist
+  const watchedHospCode = watch('hosp_code')
+  const watchedDate = watch('service_date')
+  const watchedClinicType = watch('clinic_type')
+
+  // Derive start/end from service_time for display
+  const currentServiceTime = watch('service_time') ?? ''
+  const [startTime, endTime] = useMemo(() => parseServiceTime(currentServiceTime), [currentServiceTime])
+
+  const handleStartTimeChange = (v: string | null) => {
+    if (!v) return
+    const end = endTime || ''
+    const combined = end ? `${v}-${end}` : v
+    setValue('service_time', combined, { shouldValidate: true })
+  }
+
+  const handleEndTimeChange = (v: string | null) => {
+    if (!v) return
+    const start = startTime || ''
+    if (start) {
+      setValue('service_time', `${start}-${v}`, { shouldValidate: true })
+    }
+  }
+
+  // Filter end time options: must be after start time
+  const endTimeOptions = useMemo(() => {
+    if (!startTime) return TIME_ITEMS
+    const startIdx = TIME_OPTIONS.findIndex(t => t.value === startTime)
+    return TIME_ITEMS.filter((_, i) => i > startIdx)
+  }, [startTime])
+
+  const checklistFields: ChecklistField[] = [
+    ...(canChooseHosp ? [{ label: 'สถานพยาบาล', filled: !!watchedHospCode }] : []),
+    { label: 'วันที่ให้บริการ', filled: !!watchedDate },
+    { label: 'ประเภทคลินิก', filled: !!watchedClinicType },
+    { label: 'เวลาให้บริการ', filled: !!startTime && !!endTime },
+  ]
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -102,11 +173,11 @@ export function ScheduleForm({ open, onOpenChange, schedule, defaultHospCode, de
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
           {/* Service Date */}
           <div className="grid gap-2">
-            <Label htmlFor="sched-date">วันที่ให้บริการ</Label>
-            <Input
-              id="sched-date"
-              type="date"
-              {...register('service_date')}
+            <Label>วันที่ให้บริการ</Label>
+            <DatePicker
+              value={serviceDateObj}
+              onChange={handleDateChange}
+              placeholder="เลือกวันที่"
             />
             {errors.service_date && (
               <p role="alert" className="text-xs text-destructive">{errors.service_date.message}</p>
@@ -124,7 +195,7 @@ export function ScheduleForm({ open, onOpenChange, schedule, defaultHospCode, de
                   <HospCodeSelect
                     value={field.value}
                     onChange={field.onChange}
-                    items={facilities}
+                    items={hospitals}
                     placeholder="เลือกสถานพยาบาล"
                   />
                 )}
@@ -161,14 +232,44 @@ export function ScheduleForm({ open, onOpenChange, schedule, defaultHospCode, de
             )}
           </div>
 
-          {/* Service Time */}
+          {/* Service Time — Start / End */}
           <div className="grid gap-2">
-            <Label htmlFor="sched-time">เวลาให้บริการ</Label>
-            <Input
-              id="sched-time"
-              placeholder="เช่น 09.00-10.00"
-              {...register('service_time')}
-            />
+            <Label>เวลาให้บริการ</Label>
+            <div className="flex items-center gap-2">
+              <Select
+                value={startTime}
+                onValueChange={handleStartTimeChange}
+                items={TIME_ITEMS}
+              >
+                <SelectTrigger className="w-full" aria-label="เวลาเริ่ม">
+                  <SelectValue placeholder="เริ่ม" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {TIME_OPTIONS.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <span className="text-muted-foreground shrink-0">-</span>
+              <Select
+                value={endTime}
+                onValueChange={handleEndTimeChange}
+                items={endTimeOptions}
+              >
+                <SelectTrigger className="w-full" aria-label="เวลาจบ">
+                  <SelectValue placeholder="จบ" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {endTimeOptions.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
             {errors.service_time && (
               <p role="alert" className="text-xs text-destructive">{errors.service_time.message}</p>
             )}
@@ -188,6 +289,9 @@ export function ScheduleForm({ open, onOpenChange, schedule, defaultHospCode, de
               <p role="alert" className="text-xs text-destructive">{errors.appoint_count.message}</p>
             )}
           </div>
+
+          {/* Checklist Card */}
+          <FormChecklistCard fields={checklistFields} />
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

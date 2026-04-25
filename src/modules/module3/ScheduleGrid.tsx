@@ -14,7 +14,7 @@ import { useScheduleRecordIncident } from './useSchedule'
 import { CLINIC_TYPES } from '@/constants/clinicTypes'
 import type { ClinicScheduleWithActual } from '@/types/schedule'
 import { useAuthStore } from '@/stores/authStore'
-import { format, addDays } from 'date-fns'
+import { format, parseISO, addDays } from 'date-fns'
 import { th } from 'date-fns/locale'
 import { Pencil } from 'lucide-react'
 
@@ -24,7 +24,16 @@ interface ScheduleGridProps {
   onEdit: (item: ClinicScheduleWithActual) => void
 }
 
-const THAI_DAYS = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหหสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์']
+const THAI_DAYS = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์']
+
+/** Format "2026-04-26" → "26 เมษายน 2026" with Thai locale fallback */
+function formatThaiDate(dateStr: string): string {
+  try {
+    return format(parseISO(dateStr), 'd MMMM yyyy', { locale: th })
+  } catch {
+    return dateStr
+  }
+}
 
 function getClinicLabel(clinicType: string): string {
   const found = CLINIC_TYPES.find((ct) => ct.value === clinicType)
@@ -217,7 +226,9 @@ export function ScheduleGrid({ data, weekStart, onEdit }: ScheduleGridProps) {
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <span className="text-muted-foreground">วันที่</span>
-                  <div className="font-medium">{selectedSchedule.service_date}</div>
+                  <div className="font-medium">
+                    {formatThaiDate(selectedSchedule.service_date)}
+                  </div>
                 </div>
                 <div>
                   <span className="text-muted-foreground">เวลา</span>

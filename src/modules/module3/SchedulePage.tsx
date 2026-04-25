@@ -53,7 +53,10 @@ export default function SchedulePage() {
   }, [months, clinicFilter])
 
   const { data: schedules1 = [], isLoading: loading1, isError: error1, refetch: refetch1 } = useScheduleList(filters)
-  const { data: schedules2 = [], isLoading: loading2, isError: error2, refetch: refetch2 } = useScheduleList(filters2 ?? { month: '__none__' })
+  const { data: schedules2 = [], isLoading: loading2, isError: error2, refetch: refetch2 } = useScheduleList(
+    filters2 ?? {},
+    { enabled: !!filters2 },
+  )
 
   const schedules = useMemo(() => {
     if (months.length === 1) return schedules1
@@ -155,7 +158,7 @@ export default function SchedulePage() {
         open={formOpen}
         onOpenChange={setFormOpen}
         schedule={editingSchedule}
-        defaultHospCode={user?.hosp_code}
+        defaultHospCode={user?.role === 'staff_hsc' ? user.hosp_code : undefined}
       />
     </PageWrapper>
   )
