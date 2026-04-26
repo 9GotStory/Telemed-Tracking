@@ -35,7 +35,7 @@ export function PatientList({ patients, isLoading }: PatientListProps) {
   // Summary counts
   const confirmed = patients.filter((p) => p.dispensing_confirmed === 'Y').length
   const absent = patients.filter((p) => p.attended === 'N').length
-  const pending = patients.length - confirmed - absent
+  const pending = patients.filter((p) => p.dispensing_confirmed !== 'Y' && p.attended !== 'N').length
 
   return (
     <div className="grid gap-3">

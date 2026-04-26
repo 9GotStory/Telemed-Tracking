@@ -3069,6 +3069,7 @@ function handleVisitMedsSave(user, data) {
     var hasVmChanges = false;
     for (var m = 1; m < vmData.length; m++) {
       if (String(vmData[m][VISIT_MEDS_COLS.vn]) === vn) {
+        if (String(vmData[m][VISIT_MEDS_COLS.status]) === "cancelled") continue;
         vmData[m][VISIT_MEDS_COLS.status] = "confirmed";
         vmData[m][VISIT_MEDS_COLS.updated_by] = user.user_id;
         vmData[m][VISIT_MEDS_COLS.updated_at] = now;
@@ -3105,6 +3106,25 @@ function handleVisitMedsSave(user, data) {
       if (mKey) medIdMap[mKey] = r;
     }
 
+    // Build existing drug set from MASTER_DRUGS for auto-register check
+    // Key = drug_name|strength (composite) since same drug can have multiple strengths
+    var mdSheet = ss.getSheetByName("MASTER_DRUGS");
+    var existingDrugKeys = {};
+    var inactiveDrugKeys = {};
+    var mdData = [];
+    if (mdSheet) {
+      mdData = mdSheet.getDataRange().getValues();
+      for (var md = 1; md < mdData.length; md++) {
+        var mdKey = String(mdData[md][MASTER_DRUG_COLS.drug_name]).toLowerCase()
+          + "|" + String(mdData[md][MASTER_DRUG_COLS.strength]).toLowerCase();
+        if (String(mdData[md][MASTER_DRUG_COLS.active]) === "Y") {
+          existingDrugKeys[mdKey] = true;
+        } else {
+          inactiveDrugKeys[mdKey] = md; // row index for reactivation
+        }
+      }
+    }
+
     for (var e = 0; e < meds.length; e++) {
       var med = meds[e];
       var medId = String(med.med_id || "").trim();
@@ -3129,7 +3149,8 @@ function handleVisitMedsSave(user, data) {
           if (isChanged === "Y") hasDrugChange = true;
 
           var source = String(med.source || "hosp_stock");
-          if (source === "hosp_pending") hasSourcePending = true;
+          var medStatus = String(med.status || "confirmed");
+          if (source === "hosp_pending" && medStatus !== "cancelled") hasSourcePending = true;
 
           vmData[rowIdx][VISIT_MEDS_COLS.drug_name] = String(
             med.drug_name || "",
@@ -3143,12 +3164,36 @@ function handleVisitMedsSave(user, data) {
           vmData[rowIdx][VISIT_MEDS_COLS.source] = source;
           vmData[rowIdx][VISIT_MEDS_COLS.is_changed] = isChanged;
           vmData[rowIdx][VISIT_MEDS_COLS.note] = String(med.note || "");
-          vmData[rowIdx][VISIT_MEDS_COLS.status] = "confirmed";
+          vmData[rowIdx][VISIT_MEDS_COLS.status] = String(med.status || "confirmed");
           vmData[rowIdx][VISIT_MEDS_COLS.updated_by] = user.user_id;
           vmData[rowIdx][VISIT_MEDS_COLS.updated_at] = now;
         }
         // If medId not found in map, skip (matches original behavior)
       } else {
+        // Auto-register new drug in MASTER_DRUGS if not exists (or reactivate soft-deleted)
+        var newDrugName = String(med.drug_name || "").trim();
+        var newDrugStrength = String(med.strength || "").trim();
+        var newDrugKey = newDrugName.toLowerCase() + "|" + newDrugStrength.toLowerCase();
+        if (newDrugName && mdSheet && !existingDrugKeys[newDrugKey]) {
+          existingDrugKeys[newDrugKey] = true; // prevent duplicate within same save
+          var inactiveIdx = inactiveDrugKeys[newDrugKey];
+          if (inactiveIdx !== undefined) {
+            // Reactivate existing soft-deleted drug
+            mdData[inactiveIdx][MASTER_DRUG_COLS.active] = "Y";
+            mdSheet.getDataRange().setValues(mdData);
+          } else {
+            // Truly new drug — insert
+            var mdNewRow = mdSheet.getLastRow() + 1;
+            ensureTextFormat("MASTER_DRUGS", mdNewRow);
+            mdSheet.getRange(mdNewRow, 1, 1, 5).setValues([[
+              Utilities.getUuid(),
+              newDrugName,
+              newDrugStrength,
+              String(med.unit || ""),
+              "Y",
+            ]]);
+          }
+        }
         // Collect new med for batch append
         var newSource = String(med.source || "hosp_stock");
         if (newSource === "hosp_pending") hasSourcePending = true;
@@ -3221,6 +3266,7 @@ function handleVisitMedsSave(user, data) {
     // Batch VISIT_SUMMARY update
     var vsIdx3 = vsFoundRow - 1;
     vsRows[vsIdx3][VISIT_SUMMARY_COLS.attended] = "N";
+    vsRows[vsIdx3][VISIT_SUMMARY_COLS.dispensing_confirmed] = "N";
     vsSheet
       .getRange(vsFoundRow, 1, 1, vsRows[0].length)
       .setValues([vsRows[vsIdx3]]);

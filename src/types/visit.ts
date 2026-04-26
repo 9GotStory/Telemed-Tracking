@@ -1,5 +1,5 @@
 export type ClinicType = 'PCU-DM' | 'PCU-HT' | 'ANC-nutrition' | 'ANC-parent' | 'postpartum-EPI' | 'postpartum-dev'
-export type DrugSource = 'hsc_stock' | 'hosp_stock' | 'hosp_pending'
+export type DrugSource = 'hosp_stock' | 'hosp_pending'
 
 // Re-export from constants for single source of truth — consumers should prefer these
 export type { ClinicTypeValue } from '@/constants/clinicTypes'

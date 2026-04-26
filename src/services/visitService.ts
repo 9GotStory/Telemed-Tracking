@@ -75,6 +75,7 @@ export interface MedSaveItem {
   sig: string
   source: string
   note: string
+  status?: string
 }
 
 export type MedActionType = 'confirm_all' | 'edit' | 'absent'

@@ -3,7 +3,7 @@ import { toast } from 'sonner'
 import { visitService } from '@/services/visitService'
 import type { VisitSummaryFilters, VisitMedsSavePayload } from '@/services/visitService'
 
-export const visitKeys = {
+const visitKeys = {
   all: ['visits'] as const,
   summaries: (filters: VisitSummaryFilters) => [...visitKeys.all, 'summary', filters] as const,
   meds: (vn: string) => [...visitKeys.all, 'meds', vn] as const,
@@ -31,9 +31,8 @@ export function useVisitMedsSave() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (payload: VisitMedsSavePayload) => visitService.saveMeds(payload),
-    onSuccess: (_data, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: visitKeys.all })
-      queryClient.invalidateQueries({ queryKey: visitKeys.meds(variables.vn) })
       toast.success('บันทึกยาสำเร็จ')
     },
     onError: (err) => { toast.error('บันทึกยาไม่สำเร็จ', { description: err.message }) },

@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { QueryError } from '@/components/common/QueryError'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -11,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { DatePicker } from '@/components/common/DatePicker'
 import { useVisitSummaryList } from './useDrugConfirm'
 import { PatientList } from './PatientList'
 import { useFacilitiesList } from '@/hooks/useFacilities'
@@ -21,28 +21,19 @@ import { useDebugMount } from '@/hooks/useDebugLog'
 export default function DrugConfirmPage() {
   useDebugMount('DrugConfirmPage')
   const { user } = useAuthStore()
-  const today = format(new Date(), 'yyyy-MM-dd')
-  const [serviceDate, setServiceDate] = useState(today)
+  const [serviceDate, setServiceDate] = useState<Date>(new Date())
   const [hospCode, setHospCode] = useState<string>(user?.role === 'staff_hsc' ? (user?.hosp_code ?? '') : '')
 
   // Facility list for admin users
   const { data: facilities = [] } = useFacilitiesList()
 
   const filters = useMemo(() => {
-    const f: { service_date: string; hosp_code?: string } = { service_date: serviceDate }
+    const f: { service_date: string; hosp_code?: string } = { service_date: format(serviceDate, 'yyyy-MM-dd') }
     if (hospCode && hospCode !== '__all__') f.hosp_code = hospCode
     return f
   }, [serviceDate, hospCode])
 
   const { data: patients = [], isLoading, isError, refetch } = useVisitSummaryList(filters)
-
-  // staff_hsc always filtered to own hosp_code
-  const displayPatients = useMemo(() => {
-    if (user?.role === 'staff_hsc' && user.hosp_code) {
-      return patients.filter((p) => p.hosp_code === user.hosp_code)
-    }
-    return patients
-  }, [patients, user?.role, user?.hosp_code])
 
   return (
     <PageWrapper>
@@ -59,10 +50,10 @@ export default function DrugConfirmPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="grid gap-1.5">
             <Label>วันที่ให้บริการ</Label>
-            <Input
-              type="date"
+            <DatePicker
               value={serviceDate}
-              onChange={(e) => setServiceDate(e.target.value)}
+              onChange={(d) => { if (d) setServiceDate(d) }}
+              placeholder="เลือกวันที่"
             />
           </div>
           {user?.role !== 'staff_hsc' && (
@@ -91,7 +82,7 @@ export default function DrugConfirmPage() {
         {isError ? (
           <QueryError onRetry={() => refetch()} />
         ) : (
-          <PatientList patients={displayPatients} isLoading={isLoading} />
+          <PatientList patients={patients} isLoading={isLoading} />
         )}
       </div>
     </PageWrapper>
