@@ -24,10 +24,10 @@ export function DrugSearchInput({ onSelect }: DrugSearchInputProps) {
     return () => clearTimeout(timerRef.current)
   }, [query])
 
-  const { data: results = [], isFetching } = useDrugList({
-    active: 'Y',
-    search: debouncedQuery || undefined,
-  })
+  const { data: results = [], isFetching } = useDrugList(
+    { active: 'Y', search: debouncedQuery || undefined },
+    { enabled: !!debouncedQuery },
+  )
 
   // Close dropdown on outside click
   useEffect(() => {

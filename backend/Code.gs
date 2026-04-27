@@ -167,6 +167,9 @@ var VISIT_SUMMARY_COLS = {
   diff_status: 14,
   confirmed_by: 15,
   confirmed_at: 16,
+  drug_sent_date: 17,
+  drug_received_date: 18,
+  drug_delivered_date: 19,
 };
 
 var FOLLOWUP_COLS = {
@@ -217,6 +220,7 @@ var SHEET_HEADERS = {
     "service_date", "attended", "has_drug_change", "drug_source_pending",
     "dispensing_confirmed", "import_round1_at", "import_round2_at",
     "diff_status", "confirmed_by", "confirmed_at",
+    "drug_sent_date", "drug_received_date", "drug_delivered_date",
   ],
   VISIT_MEDS: [
     "med_id", "vn", "drug_name", "strength", "qty", "unit", "sig",
@@ -1006,6 +1010,12 @@ function routeAction(action, data, user) {
     },
     "visitMeds.save": function () {
       return handleVisitMedsSave(user, data);
+    },
+    "visitMeds.batchConfirm": function () {
+      return handleVisitMedsBatchConfirm(user, data);
+    },
+    "visitMeds.trackDelivery": function () {
+      return handleVisitMedsTrackDelivery(user, data);
     },
     "followup.list": function () {
       return handleFollowupList(user, data);
@@ -2943,6 +2953,9 @@ function handleVisitSummaryList(user, params) {
       drug_source_pending: row[VISIT_SUMMARY_COLS.drug_source_pending] || "N",
       dispensing_confirmed: row[VISIT_SUMMARY_COLS.dispensing_confirmed] || "N",
       diff_status: row[VISIT_SUMMARY_COLS.diff_status] || "pending",
+      drug_sent_date: toDateStr(row[VISIT_SUMMARY_COLS.drug_sent_date]),
+      drug_received_date: toDateStr(row[VISIT_SUMMARY_COLS.drug_received_date]),
+      drug_delivered_date: toDateStr(row[VISIT_SUMMARY_COLS.drug_delivered_date]),
     });
   }
 
@@ -3086,6 +3099,19 @@ function handleVisitMedsSave(user, data) {
     vsRows[vsIdx][VISIT_SUMMARY_COLS.dispensing_confirmed] = "Y";
     vsRows[vsIdx][VISIT_SUMMARY_COLS.confirmed_by] = user.user_id;
     vsRows[vsIdx][VISIT_SUMMARY_COLS.confirmed_at] = now;
+
+    // Check drug_source_pending from meds
+    var confirmHasPending = false;
+    for (var cp = 1; cp < vmData.length; cp++) {
+      if (String(vmData[cp][VISIT_MEDS_COLS.vn]) === vn) {
+        if (String(vmData[cp][VISIT_MEDS_COLS.source]) === "hosp_pending"
+            && String(vmData[cp][VISIT_MEDS_COLS.status]) !== "cancelled") {
+          confirmHasPending = true;
+          break;
+        }
+      }
+    }
+    vsRows[vsIdx][VISIT_SUMMARY_COLS.drug_source_pending] = confirmHasPending ? "Y" : "N";
     vsSheet
       .getRange(vsFoundRow, 1, 1, vsRows[0].length)
       .setValues([vsRows[vsIdx]]);
@@ -3096,7 +3122,6 @@ function handleVisitMedsSave(user, data) {
   } else if (actionType === "edit") {
     // T164: Batch edit — read vmData once, build med_id lookup map
     var hasDrugChange = false;
-    var hasSourcePending = false;
     var newMeds = [];
 
     // Build med_id → row index map for O(1) lookup instead of O(n) per med
@@ -3133,24 +3158,35 @@ function handleVisitMedsSave(user, data) {
         // Update existing med in memory
         var rowIdx = medIdMap[medId];
         if (rowIdx !== undefined) {
-          var oldName = String(vmData[rowIdx][VISIT_MEDS_COLS.drug_name]);
-          var oldStrength = String(vmData[rowIdx][VISIT_MEDS_COLS.strength]);
-          var oldQty = Number(vmData[rowIdx][VISIT_MEDS_COLS.qty]);
-          var oldSig = String(vmData[rowIdx][VISIT_MEDS_COLS.sig]);
+          var oldSource = String(vmData[rowIdx][VISIT_MEDS_COLS.source]);
+          var oldNote = String(vmData[rowIdx][VISIT_MEDS_COLS.note]);
+          var oldStatus = String(vmData[rowIdx][VISIT_MEDS_COLS.status]);
+          var oldUnit = String(vmData[rowIdx][VISIT_MEDS_COLS.unit]);
 
+          // is_changed tracks core drug data changes (drug_name, strength, qty, sig)
           var isChanged =
-            oldName !== String(med.drug_name) ||
-            oldStrength !== String(med.strength) ||
-            oldQty !== Number(med.qty) ||
-            oldSig !== String(med.sig)
+            String(vmData[rowIdx][VISIT_MEDS_COLS.drug_name]) !== String(med.drug_name) ||
+            String(vmData[rowIdx][VISIT_MEDS_COLS.strength]) !== String(med.strength) ||
+            Number(vmData[rowIdx][VISIT_MEDS_COLS.qty]) !== Number(med.qty) ||
+            String(vmData[rowIdx][VISIT_MEDS_COLS.sig]) !== String(med.sig)
               ? "Y"
               : "N";
 
-          if (isChanged === "Y") hasDrugChange = true;
+          var newSource = String(med.source || "hosp_stock");
+          var newStatus = String(med.status || "confirmed");
 
-          var source = String(med.source || "hosp_stock");
-          var medStatus = String(med.status || "confirmed");
-          if (source === "hosp_pending" && medStatus !== "cancelled") hasSourcePending = true;
+          // has_drug_change='Y' if ANY field changed (source, note, unit, or core data)
+          // Exclude draft→confirmed status transition — that's just initial confirm, not a drug change
+          var statusActuallyChanged = oldStatus !== newStatus &&
+            !(oldStatus === "draft" && newStatus === "confirmed");
+          var anyFieldChanged =
+            isChanged === "Y" ||
+            oldSource !== newSource ||
+            statusActuallyChanged ||
+            oldNote !== String(med.note || "") ||
+            oldUnit !== String(med.unit || "");
+
+          if (anyFieldChanged) hasDrugChange = true;
 
           vmData[rowIdx][VISIT_MEDS_COLS.drug_name] = String(
             med.drug_name || "",
@@ -3158,15 +3194,42 @@ function handleVisitMedsSave(user, data) {
           vmData[rowIdx][VISIT_MEDS_COLS.strength] = String(
             med.strength || "",
           );
-          vmData[rowIdx][VISIT_MEDS_COLS.qty] = Number(med.qty) || 0;
+          vmData[rowIdx][VISIT_MEDS_COLS.qty] = Math.max(1, Number(med.qty) || 0);
           vmData[rowIdx][VISIT_MEDS_COLS.unit] = String(med.unit || "");
           vmData[rowIdx][VISIT_MEDS_COLS.sig] = String(med.sig || "");
-          vmData[rowIdx][VISIT_MEDS_COLS.source] = source;
+          vmData[rowIdx][VISIT_MEDS_COLS.source] = newSource;
           vmData[rowIdx][VISIT_MEDS_COLS.is_changed] = isChanged;
           vmData[rowIdx][VISIT_MEDS_COLS.note] = String(med.note || "");
-          vmData[rowIdx][VISIT_MEDS_COLS.status] = String(med.status || "confirmed");
+          vmData[rowIdx][VISIT_MEDS_COLS.status] = newStatus;
           vmData[rowIdx][VISIT_MEDS_COLS.updated_by] = user.user_id;
           vmData[rowIdx][VISIT_MEDS_COLS.updated_at] = now;
+
+          // Auto-register drug in MASTER_DRUGS if drug_name or strength changed
+          // and the new combination doesn't exist (mirrors new med auto-register logic)
+          if (isChanged === "Y") {
+            var existDrugName = String(med.drug_name || "").trim();
+            var existDrugStrength = String(med.strength || "").trim();
+            var existDrugKey = existDrugName.toLowerCase() + "|" + existDrugStrength.toLowerCase();
+            if (existDrugName && mdSheet && !existingDrugKeys[existDrugKey]) {
+              existingDrugKeys[existDrugKey] = true; // prevent duplicate within same save
+              var existInactiveIdx = inactiveDrugKeys[existDrugKey];
+              if (existInactiveIdx !== undefined) {
+                // Reactivate soft-deleted drug — write only the active cell
+                mdSheet.getRange(existInactiveIdx + 1, MASTER_DRUG_COLS.active + 1).setValue("Y");
+              } else {
+                // Truly new combination — insert into MASTER_DRUGS
+                var existNewRow = mdSheet.getLastRow() + 1;
+                ensureTextFormat("MASTER_DRUGS", existNewRow);
+                mdSheet.getRange(existNewRow, 1, 1, 5).setValues([[
+                  Utilities.getUuid(),
+                  existDrugName,
+                  existDrugStrength,
+                  String(med.unit || ""),
+                  "Y",
+                ]]);
+              }
+            }
+          }
         }
         // If medId not found in map, skip (matches original behavior)
       } else {
@@ -3178,9 +3241,8 @@ function handleVisitMedsSave(user, data) {
           existingDrugKeys[newDrugKey] = true; // prevent duplicate within same save
           var inactiveIdx = inactiveDrugKeys[newDrugKey];
           if (inactiveIdx !== undefined) {
-            // Reactivate existing soft-deleted drug
-            mdData[inactiveIdx][MASTER_DRUG_COLS.active] = "Y";
-            mdSheet.getDataRange().setValues(mdData);
+            // Reactivate existing soft-deleted drug — write only the active cell
+            mdSheet.getRange(inactiveIdx + 1, MASTER_DRUG_COLS.active + 1).setValue("Y");
           } else {
             // Truly new drug — insert
             var mdNewRow = mdSheet.getLastRow() + 1;
@@ -3195,8 +3257,7 @@ function handleVisitMedsSave(user, data) {
           }
         }
         // Collect new med for batch append
-        var newSource = String(med.source || "hosp_stock");
-        if (newSource === "hosp_pending") hasSourcePending = true;
+        var addSource = String(med.source || "hosp_stock");
         hasDrugChange = true;
 
         newMeds.push([
@@ -3204,10 +3265,10 @@ function handleVisitMedsSave(user, data) {
           vn,
           String(med.drug_name || ""),
           String(med.strength || ""),
-          Number(med.qty) || 0,
+          Math.max(1, Number(med.qty) || 0),
           String(med.unit || ""),
           String(med.sig || ""),
-          newSource,
+          addSource,
           "Y", // is_changed for new drugs
           1, // round
           "confirmed",
@@ -3231,12 +3292,33 @@ function handleVisitMedsSave(user, data) {
     // Batch VISIT_SUMMARY update
     var vsIdx2 = vsFoundRow - 1;
     vsRows[vsIdx2][VISIT_SUMMARY_COLS.attended] = "Y";
-    vsRows[vsIdx2][VISIT_SUMMARY_COLS.has_drug_change] = hasDrugChange
-      ? "Y"
-      : "N";
-    vsRows[vsIdx2][VISIT_SUMMARY_COLS.drug_source_pending] = hasSourcePending
-      ? "Y"
-      : "N";
+    // Preserve existing has_drug_change='Y' — only escalate, never reset to N
+    var prevDrugChange = String(vsRows[vsIdx2][VISIT_SUMMARY_COLS.has_drug_change]);
+    vsRows[vsIdx2][VISIT_SUMMARY_COLS.has_drug_change] =
+      (hasDrugChange || prevDrugChange === "Y") ? "Y" : "N";
+
+    // Recalculate drug_source_pending from vmData (existing) + newMeds (appended)
+    var editHasPending = false;
+    for (var sp = 1; sp < vmData.length; sp++) {
+      if (String(vmData[sp][VISIT_MEDS_COLS.vn]) === vn) {
+        if (String(vmData[sp][VISIT_MEDS_COLS.source]) === "hosp_pending"
+            && String(vmData[sp][VISIT_MEDS_COLS.status]) !== "cancelled") {
+          editHasPending = true;
+          break;
+        }
+      }
+    }
+    // Also check newMeds array (not yet in vmData)
+    if (!editHasPending) {
+      for (var np = 0; np < newMeds.length; np++) {
+        // newMeds columns: [med_id, vn, drug_name, strength, qty, unit, sig, source, is_changed, round, status, note, updated_by, updated_at]
+        if (String(newMeds[np][7]) === "hosp_pending") {
+          editHasPending = true;
+          break;
+        }
+      }
+    }
+    vsRows[vsIdx2][VISIT_SUMMARY_COLS.drug_source_pending] = editHasPending ? "Y" : "N";
     vsRows[vsIdx2][VISIT_SUMMARY_COLS.dispensing_confirmed] = "Y";
     vsRows[vsIdx2][VISIT_SUMMARY_COLS.confirmed_by] = user.user_id;
     vsRows[vsIdx2][VISIT_SUMMARY_COLS.confirmed_at] = now;
@@ -3249,36 +3331,320 @@ function handleVisitMedsSave(user, data) {
       med_count: meds.length,
     });
   } else if (actionType === "absent") {
-    // T165: Batch absent — modify in memory, write back once
-    var hasAbsChanges = false;
-    for (var ab = 1; ab < vmData.length; ab++) {
-      if (String(vmData[ab][VISIT_MEDS_COLS.vn]) === vn) {
-        vmData[ab][VISIT_MEDS_COLS.status] = "cancelled";
-        vmData[ab][VISIT_MEDS_COLS.updated_by] = user.user_id;
-        vmData[ab][VISIT_MEDS_COLS.updated_at] = now;
-        hasAbsChanges = true;
-      }
-    }
-    if (hasAbsChanges) {
-      vmSheet.getDataRange().setValues(vmData);
-    }
-
-    // Batch VISIT_SUMMARY update
+    // Mark patient as absent — keep meds as draft so they remain when patient arrives later
     var vsIdx3 = vsFoundRow - 1;
     vsRows[vsIdx3][VISIT_SUMMARY_COLS.attended] = "N";
     vsRows[vsIdx3][VISIT_SUMMARY_COLS.dispensing_confirmed] = "N";
+    vsRows[vsIdx3][VISIT_SUMMARY_COLS.confirmed_by] = "";
+    vsRows[vsIdx3][VISIT_SUMMARY_COLS.confirmed_at] = "";
     vsSheet
       .getRange(vsFoundRow, 1, 1, vsRows[0].length)
       .setValues([vsRows[vsIdx3]]);
 
-    appendAuditLog(user, "ABSENT", "VISIT_MEDS", vn, null, {
+    appendAuditLog(user, "ABSENT", "VISIT_SUMMARY", vn, null, {
       action_type: "absent",
+    });
+  } else if (actionType === "undo_absent") {
+    // Undo absent — patient arrived late, restore attended status (meds were kept as draft)
+    var vsIdx4 = vsFoundRow - 1;
+    if (String(vsRows[vsIdx4][VISIT_SUMMARY_COLS.attended]) !== "N") {
+      return { success: false, error: "Patient is not marked absent" };
+    }
+
+    // Recalculate drug_source_pending from meds (still in draft)
+    var undoHasPending = false;
+    for (var up = 1; up < vmData.length; up++) {
+      if (String(vmData[up][VISIT_MEDS_COLS.vn]) === vn) {
+        if (String(vmData[up][VISIT_MEDS_COLS.source]) === "hosp_pending"
+            && String(vmData[up][VISIT_MEDS_COLS.status]) !== "cancelled") {
+          undoHasPending = true;
+          break;
+        }
+      }
+    }
+
+    vsRows[vsIdx4][VISIT_SUMMARY_COLS.attended] = "";
+    vsRows[vsIdx4][VISIT_SUMMARY_COLS.dispensing_confirmed] = "N";
+    vsRows[vsIdx4][VISIT_SUMMARY_COLS.confirmed_by] = "";
+    vsRows[vsIdx4][VISIT_SUMMARY_COLS.confirmed_at] = "";
+    vsRows[vsIdx4][VISIT_SUMMARY_COLS.drug_source_pending] = undoHasPending ? "Y" : "N";
+    vsSheet
+      .getRange(vsFoundRow, 1, 1, vsRows[0].length)
+      .setValues([vsRows[vsIdx4]]);
+
+    appendAuditLog(user, "UNDO_ABSENT", "VISIT_SUMMARY", vn, null, {
+      action_type: "undo_absent",
+    });
+  } else if (actionType === "undo_confirm") {
+    // Undo confirm — revert back to pending so drugs can be re-edited
+    var vsIdx5 = vsFoundRow - 1;
+    if (String(vsRows[vsIdx5][VISIT_SUMMARY_COLS.dispensing_confirmed]) !== "Y") {
+      return { success: false, error: "Patient is not confirmed" };
+    }
+
+    // Reset meds to draft
+    var hasUndoConfirmChanges = false;
+    for (var uc = 1; uc < vmData.length; uc++) {
+      if (String(vmData[uc][VISIT_MEDS_COLS.vn]) === vn) {
+        if (String(vmData[uc][VISIT_MEDS_COLS.status]) === "confirmed") {
+          vmData[uc][VISIT_MEDS_COLS.status] = "draft";
+          vmData[uc][VISIT_MEDS_COLS.updated_by] = user.user_id;
+          vmData[uc][VISIT_MEDS_COLS.updated_at] = now;
+          hasUndoConfirmChanges = true;
+        }
+      }
+    }
+    if (hasUndoConfirmChanges) {
+      vmSheet.getDataRange().setValues(vmData);
+    }
+
+    // Recalculate drug_source_pending
+    var undoConfPending = false;
+    for (var ucp = 1; ucp < vmData.length; ucp++) {
+      if (String(vmData[ucp][VISIT_MEDS_COLS.vn]) === vn) {
+        if (String(vmData[ucp][VISIT_MEDS_COLS.source]) === "hosp_pending"
+            && String(vmData[ucp][VISIT_MEDS_COLS.status]) !== "cancelled") {
+          undoConfPending = true;
+          break;
+        }
+      }
+    }
+
+    vsRows[vsIdx5][VISIT_SUMMARY_COLS.dispensing_confirmed] = "N";
+    vsRows[vsIdx5][VISIT_SUMMARY_COLS.confirmed_by] = "";
+    vsRows[vsIdx5][VISIT_SUMMARY_COLS.confirmed_at] = "";
+    vsRows[vsIdx5][VISIT_SUMMARY_COLS.drug_source_pending] = undoConfPending ? "Y" : "N";
+    // Reset attended and delivery dates since confirm is being undone
+    vsRows[vsIdx5][VISIT_SUMMARY_COLS.attended] = "";
+    vsRows[vsIdx5][VISIT_SUMMARY_COLS.drug_sent_date] = "";
+    vsRows[vsIdx5][VISIT_SUMMARY_COLS.drug_received_date] = "";
+    vsRows[vsIdx5][VISIT_SUMMARY_COLS.drug_delivered_date] = "";
+    vsSheet
+      .getRange(vsFoundRow, 1, 1, vsRows[0].length)
+      .setValues([vsRows[vsIdx5]]);
+
+    appendAuditLog(user, "UNDO_CONFIRM", "VISIT_MEDS", vn, null, {
+      action_type: "undo_confirm",
     });
   } else {
     return { success: false, error: "Invalid action_type: " + actionType };
   }
 
-  return { success: true, data: { message: "Drugs confirmed" } };
+  var successMessages = {
+    confirm_all: "Drugs confirmed",
+    edit: "Drugs updated",
+    absent: "Marked as absent",
+    undo_absent: "Absent status reverted",
+    undo_confirm: "Confirm status reverted",
+  };
+  return { success: true, data: { message: successMessages[actionType] || "Operation completed" } };
+}
+
+/**
+ * visitMeds.batchConfirm — POST, batch confirm or absent multiple VNs at once.
+ * data: { action: 'confirm' | 'absent', vns: string[] }
+ * All authenticated users. staff_hsc: only own hosp_code VNs.
+ */
+function handleVisitMedsBatchConfirm(user, data) {
+  var vns = data.vns;
+  var batchAction = data.action || "confirm";
+  if (!Array.isArray(vns) || vns.length === 0) {
+    return { success: false, error: "vns array is required" };
+  }
+  if (vns.length > 200) {
+    return { success: false, error: "Batch limit is 200 VNs" };
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var vsSheet = ss.getSheetByName("VISIT_SUMMARY");
+  var vmSheet = ss.getSheetByName("VISIT_MEDS");
+  if (!vsSheet || !vmSheet) return { success: false, error: "Sheet not found" };
+
+  var now = new Date().toISOString();
+  var vsRows = vsSheet.getDataRange().getValues();
+  var vmData = vmSheet.getDataRange().getValues();
+
+  // Build VN → row index lookup for VISIT_SUMMARY
+  var vnSet = {};
+  for (var v = 0; v < vns.length; v++) {
+    vnSet[String(vns[v])] = true;
+  }
+
+  // Collect target rows from VISIT_SUMMARY
+  var targetVsRows = [];
+  for (var r = 1; r < vsRows.length; r++) {
+    var rowVn = String(vsRows[r][VISIT_SUMMARY_COLS.vn]);
+    if (vnSet[rowVn]) {
+      var dc = String(vsRows[r][VISIT_SUMMARY_COLS.dispensing_confirmed]);
+      var att = String(vsRows[r][VISIT_SUMMARY_COLS.attended]);
+      if (batchAction === "confirm" && dc === "Y") continue;
+      if (batchAction === "absent" && (att === "N" || dc === "Y")) continue;
+      targetVsRows.push({ vsIdx: r, vsRowNum: r + 1, vn: rowVn });
+    }
+  }
+
+  // staff_hsc: filter to own hosp_code only
+  if (user.role === "staff_hsc") {
+    targetVsRows = targetVsRows.filter(function (t) {
+      return String(vsRows[t.vsIdx][VISIT_SUMMARY_COLS.hosp_code]) === user.hosp_code;
+    });
+  }
+
+  if (targetVsRows.length === 0) {
+    return { success: true, data: { message: "ไม่มีรายการที่ต้องอัปเดต", updated: 0 } };
+  }
+
+  // Build VN set from targets for VISIT_MEDS lookup
+  var targetVnSet = {};
+  for (var t = 0; t < targetVsRows.length; t++) {
+    targetVnSet[targetVsRows[t].vn] = true;
+  }
+
+  // Update VISIT_MEDS in memory (only for confirm — absent keeps meds as draft)
+  var hasVmChanges = false;
+  if (batchAction === "confirm") {
+    for (var m = 1; m < vmData.length; m++) {
+      var medVn = String(vmData[m][VISIT_MEDS_COLS.vn]);
+      if (targetVnSet[medVn]) {
+        var medStatus = String(vmData[m][VISIT_MEDS_COLS.status]);
+        if (medStatus === "cancelled") continue;
+        vmData[m][VISIT_MEDS_COLS.status] = "confirmed";
+        vmData[m][VISIT_MEDS_COLS.updated_by] = user.user_id;
+        vmData[m][VISIT_MEDS_COLS.updated_at] = now;
+        hasVmChanges = true;
+      }
+    }
+    if (hasVmChanges) vmSheet.getDataRange().setValues(vmData);
+  }
+
+  // Update VISIT_SUMMARY — single write per target
+  for (var u = 0; u < targetVsRows.length; u++) {
+    var idx = targetVsRows[u].vsIdx;
+    var rowNum = targetVsRows[u].vsRowNum;
+    if (batchAction === "confirm") {
+      vsRows[idx][VISIT_SUMMARY_COLS.attended] = "Y";
+      vsRows[idx][VISIT_SUMMARY_COLS.dispensing_confirmed] = "Y";
+      vsRows[idx][VISIT_SUMMARY_COLS.confirmed_by] = user.user_id;
+      vsRows[idx][VISIT_SUMMARY_COLS.confirmed_at] = now;
+
+      // Check drug_source_pending in same loop to avoid double write
+      var hasPending = false;
+      for (var pm = 1; pm < vmData.length; pm++) {
+        if (String(vmData[pm][VISIT_MEDS_COLS.vn]) === targetVsRows[u].vn) {
+          if (String(vmData[pm][VISIT_MEDS_COLS.source]) === "hosp_pending"
+              && String(vmData[pm][VISIT_MEDS_COLS.status]) !== "cancelled") {
+            hasPending = true;
+            break;
+          }
+        }
+      }
+      vsRows[idx][VISIT_SUMMARY_COLS.drug_source_pending] = hasPending ? "Y" : "N";
+    } else {
+      vsRows[idx][VISIT_SUMMARY_COLS.attended] = "N";
+      vsRows[idx][VISIT_SUMMARY_COLS.dispensing_confirmed] = "N";
+      vsRows[idx][VISIT_SUMMARY_COLS.confirmed_by] = "";
+      vsRows[idx][VISIT_SUMMARY_COLS.confirmed_at] = "";
+    }
+    vsSheet.getRange(rowNum, 1, 1, vsRows[0].length).setValues([vsRows[idx]]);
+  }
+
+  appendAuditLog(user, "BATCH_" + batchAction.toUpperCase(), "VISIT_MEDS", vns.join(","), null, {
+    action: batchAction,
+    count: targetVsRows.length,
+  });
+
+  return {
+    success: true,
+    data: {
+      message: (batchAction === "confirm" ? "ยืนยัน" : "บันทึกไม่มา") + "สำเร็จ " + targetVsRows.length + " รายการ",
+      updated: targetVsRows.length,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Drug Delivery Tracking (T190 — Phase 16)
+// ---------------------------------------------------------------------------
+
+/**
+ * visitMeds.trackDelivery — POST, update delivery date fields on VISIT_SUMMARY.
+ *
+ * Payload: { vn, field, date }
+ *   field: "drug_sent_date" | "drug_received_date" | "drug_delivered_date"
+ *   date: ISO date string (YYYY-MM-DD) or "" to clear
+ *
+ * Role restrictions:
+ *   staff_hosp / admin_hosp → drug_sent_date only
+ *   staff_hsc → drug_received_date + drug_delivered_date (own hosp_code only)
+ *   super_admin → any field
+ */
+function handleVisitMedsTrackDelivery(user, data) {
+  var vn = String(data.vn || "").trim();
+  var field = String(data.field || "").trim();
+  var dateVal = String(data.date || "");
+
+  if (!vn) return { success: false, error: "vn is required" };
+
+  var allowedFields = ["drug_sent_date", "drug_received_date", "drug_delivered_date"];
+  if (allowedFields.indexOf(field) === -1) {
+    return { success: false, error: "Invalid field: " + field };
+  }
+
+  // Role-based field restrictions
+  if (user.role === "staff_hosp" || user.role === "admin_hosp") {
+    if (field !== "drug_sent_date") {
+      return { success: false, error: "Role cannot update " + field };
+    }
+  } else if (user.role === "staff_hsc") {
+    if (field === "drug_sent_date") {
+      return { success: false, error: "Role cannot update " + field };
+    }
+  } else if (user.role !== "super_admin") {
+    return { success: false, error: "Forbidden" };
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var vsSheet = ss.getSheetByName("VISIT_SUMMARY");
+  if (!vsSheet) return { success: false, error: "Sheet not found" };
+
+  var vsData = vsSheet.getDataRange().getValues();
+  var vsIdx = -1;
+
+  for (var v = 1; v < vsData.length; v++) {
+    if (String(vsData[v][VISIT_SUMMARY_COLS.vn]) === vn) {
+      vsIdx = v;
+      break;
+    }
+  }
+
+  if (vsIdx === -1) return { success: false, error: "VN not found" };
+
+  // staff_hsc: verify VN belongs to own hosp_code
+  if (user.role === "staff_hsc") {
+    if (String(vsData[vsIdx][VISIT_SUMMARY_COLS.hosp_code]) !== user.hosp_code) {
+      return { success: false, error: "Access denied: VN not in your facility" };
+    }
+  }
+
+  // Validate drug_source_pending = Y
+  var pending = String(vsData[vsIdx][VISIT_SUMMARY_COLS.drug_source_pending]);
+  if (pending !== "Y") {
+    return { success: false, error: "VN has no pending drugs" };
+  }
+
+  // Update the field
+  var colIdx = VISIT_SUMMARY_COLS[field];
+  vsSheet.getRange(vsIdx + 1, colIdx + 1).setValue(dateVal);
+
+  appendAuditLog(user, "TRACK_DELIVERY", "VISIT_SUMMARY", vn, null, {
+    field: field,
+    date: dateVal,
+  });
+
+  return {
+    success: true,
+    data: { message: "อัปเดตสถานะการจัดส่งสำเร็จ", vn: vn, field: field, date: dateVal },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -3397,6 +3763,9 @@ function handleFollowupList(user, params) {
       followup_status: followupStatus,
       followup_records: fuRecords,
       meds: medsByVN[vn] || [],
+      drug_sent_date: toDateStr(row[VISIT_SUMMARY_COLS.drug_sent_date]),
+      drug_received_date: toDateStr(row[VISIT_SUMMARY_COLS.drug_received_date]),
+      drug_delivered_date: toDateStr(row[VISIT_SUMMARY_COLS.drug_delivered_date]),
     });
   }
 
@@ -4133,6 +4502,7 @@ function setupSheets() {
       "service_date", "attended", "has_drug_change", "drug_source_pending",
       "dispensing_confirmed", "import_round1_at", "import_round2_at",
       "diff_status", "confirmed_by", "confirmed_at",
+      "drug_sent_date", "drug_received_date", "drug_delivered_date",
     ],
     VISIT_MEDS: [
       "med_id", "vn", "drug_name", "strength", "qty", "unit", "sig",

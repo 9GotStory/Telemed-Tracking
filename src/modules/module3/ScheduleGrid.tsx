@@ -186,7 +186,7 @@ export function ScheduleGrid({ data, weekStart, onEdit }: ScheduleGridProps) {
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium">{s.hosp_name ?? s.hosp_code}</span>
-                          <StatusBadge variant="active">{getClinicLabel(s.clinic_type)}</StatusBadge>
+                          <StatusBadge variant="info">{getClinicLabel(s.clinic_type)}</StatusBadge>
                         </div>
                         <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
                           <span>{s.service_time}</span>
@@ -213,7 +213,7 @@ export function ScheduleGrid({ data, weekStart, onEdit }: ScheduleGridProps) {
               {selectedSchedule && (
                 <>
                   {selectedSchedule.hosp_name ?? selectedSchedule.hosp_code}
-                  <StatusBadge variant="active">
+                  <StatusBadge variant="info">
                     {getClinicLabel(selectedSchedule.clinic_type)}
                   </StatusBadge>
                 </>

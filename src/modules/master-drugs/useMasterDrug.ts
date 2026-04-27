@@ -12,10 +12,11 @@ const drugKeys = {
 /**
  * Fetch drug list with optional active/search filters.
  */
-export function useDrugList(filters: DrugFilters = {}) {
+export function useDrugList(filters: DrugFilters = {}, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: drugKeys.list(filters),
     queryFn: () => drugService.list(filters),
+    enabled: options?.enabled ?? true,
   })
 }
 

@@ -93,7 +93,7 @@ function FollowupCard({
       >
         <div className="flex items-center gap-3">
           <span className="font-medium text-sm">{item.patient_name}</span>
-          <StatusBadge variant="active">{item.clinic_type}</StatusBadge>
+          <StatusBadge variant="info">{item.clinic_type}</StatusBadge>
           <StatusBadge variant={cfg.variant}>{cfg.label}</StatusBadge>
           {item.has_drug_change === 'Y' && (
             <StatusBadge variant="pending">เปลี่ยนยา</StatusBadge>

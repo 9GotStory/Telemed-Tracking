@@ -1,8 +1,28 @@
 import { StatusBadge } from '@/components/common/StatusBadge'
 import type { FollowupItem, FollowupMed } from '@/services/followupService'
-import { Phone, AlertTriangle } from 'lucide-react'
+import { Phone, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { CLINIC_TYPES } from '@/constants/clinicTypes'
 import { formatBuddhist } from '@/utils/dateUtils'
+import { format, parseISO } from 'date-fns'
+import { th } from 'date-fns/locale'
+
+function DeliveryStep({ label, date }: { label: string; date: string }) {
+  return (
+    <div className="flex flex-col items-center gap-1 text-center">
+      <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${
+        date ? 'bg-apple-blue text-white' : 'bg-muted text-muted-foreground'
+      }`}>
+        {date ? <CheckCircle2 className="h-3.5 w-3.5" /> : null}
+      </div>
+      <span className="font-medium">{label}</span>
+      {date ? (
+        <span className="text-muted-foreground">{format(parseISO(date), 'd MMM yyyy', { locale: th })}</span>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )}
+    </div>
+  )
+}
 
 interface PatientContactCardProps {
   item: FollowupItem
@@ -48,7 +68,7 @@ export function PatientContactCard({ item }: PatientContactCardProps) {
         </div>
         <div>
           <span className="text-muted-foreground">คลินิก</span>
-          <div><StatusBadge variant="active">{getClinicLabel(item.clinic_type)}</StatusBadge></div>
+          <div><StatusBadge variant="info">{getClinicLabel(item.clinic_type)}</StatusBadge></div>
         </div>
       </div>
 
@@ -99,6 +119,18 @@ export function PatientContactCard({ item }: PatientContactCardProps) {
           <StatusBadge variant="pending">มียาที่รอส่งจาก รพ.</StatusBadge>
         )}
       </div>
+
+      {/* Delivery tracking summary */}
+      {item.drug_source_pending === 'Y' && (
+        <div className="rounded-md border bg-muted/30 p-3">
+          <div className="text-xs font-semibold text-muted-foreground mb-2">ติดตามการจัดส่งยา</div>
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            <DeliveryStep label="รพ.จัดส่ง" date={item.drug_sent_date} />
+            <DeliveryStep label="รพ.สต.ได้รับ" date={item.drug_received_date} />
+            <DeliveryStep label="ส่งมอบคนไข้" date={item.drug_delivered_date} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

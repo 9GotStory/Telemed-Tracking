@@ -17,12 +17,41 @@ import { useFacilitiesList } from '@/hooks/useFacilities'
 import { useAuthStore } from '@/stores/authStore'
 import { format } from 'date-fns'
 import { useDebugMount } from '@/hooks/useDebugLog'
+import type { VisitSummaryItem } from '@/services/visitService'
+
+type StatusFilter = 'all' | 'pending' | 'confirmed' | 'absent' | 'pending_drug'
+
+const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
+  { value: 'all', label: 'ทั้งหมด' },
+  { value: 'pending', label: 'รอยืนยัน' },
+  { value: 'confirmed', label: 'ยืนยันแล้ว' },
+  { value: 'absent', label: 'ไม่มารับบริการ' },
+  { value: 'pending_drug', label: 'รอส่งยา' },
+]
+
+function matchesStatusFilter(patient: VisitSummaryItem, filter: StatusFilter): boolean {
+  switch (filter) {
+    case 'all':
+      return true
+    case 'pending':
+      return patient.dispensing_confirmed !== 'Y' && patient.attended !== 'N'
+    case 'confirmed':
+      return patient.dispensing_confirmed === 'Y'
+    case 'absent':
+      return patient.attended === 'N'
+    case 'pending_drug':
+      return patient.drug_source_pending === 'Y'
+    default:
+      return true
+  }
+}
 
 export default function DrugConfirmPage() {
   useDebugMount('DrugConfirmPage')
   const { user } = useAuthStore()
   const [serviceDate, setServiceDate] = useState<Date>(new Date())
   const [hospCode, setHospCode] = useState<string>(user?.role === 'staff_hsc' ? (user?.hosp_code ?? '') : '')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
 
   // Facility list for admin users
   const { data: facilities = [] } = useFacilitiesList()
@@ -34,6 +63,11 @@ export default function DrugConfirmPage() {
   }, [serviceDate, hospCode])
 
   const { data: patients = [], isLoading, isError, refetch } = useVisitSummaryList(filters)
+
+  const filteredPatients = useMemo(
+    () => statusFilter === 'all' ? patients : patients.filter((p) => matchesStatusFilter(p, statusFilter)),
+    [patients, statusFilter],
+  )
 
   return (
     <PageWrapper>
@@ -47,7 +81,7 @@ export default function DrugConfirmPage() {
         </div>
 
         {/* Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="grid gap-1.5">
             <Label>วันที่ให้บริการ</Label>
             <DatePicker
@@ -76,13 +110,30 @@ export default function DrugConfirmPage() {
               </Select>
             </div>
           )}
+          <div className="grid gap-1.5">
+            <Label>สถานะ</Label>
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)} items={STATUS_OPTIONS}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="ทุกสถานะ" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {STATUS_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Patient list */}
         {isError ? (
           <QueryError onRetry={() => refetch()} />
         ) : (
-          <PatientList patients={patients} isLoading={isLoading} />
+          <PatientList patients={filteredPatients} isLoading={isLoading} />
         )}
       </div>
     </PageWrapper>

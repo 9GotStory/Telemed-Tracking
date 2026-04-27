@@ -274,7 +274,6 @@ export async function gasPost<T>(action: string, data: unknown = {}): Promise<T>
 - Logout ต้อง clear ทั้ง sessionStorage และ GAS Sheet (session_token = '')
 
 ### drug source
-- `hsc_stock` — ยาจากคลัง รพ.สต.
 - `hosp_stock` — ยาของ รพ. ที่อยู่ใน batch **(default สำหรับทุกรายการใน import รอบ 1)**
 - `hosp_pending` — ยาที่ รพ. จะส่งมาภายหลัง → flag ให้พยาบาลติดตาม
 

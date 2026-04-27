@@ -1,20 +1,24 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { DrugSourceSelector } from './DrugSourceSelector'
 import { useVisitMedsSave } from './useDrugConfirm'
 import type { VisitMedItem } from '@/services/visitService'
 import type { DrugSource } from '@/types/visit'
-import { CheckCircle2, XCircle, Plus, Trash2, RotateCcw } from 'lucide-react'
+import { CheckCircle2, XCircle, Plus, Trash2, RotateCcw, Undo2 } from 'lucide-react'
+import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { DrugSearchInput } from './DrugSearchInput'
+import { DRUG_UNITS } from '@/constants/drugUnits'
 
 interface DrugConfirmationPanelProps {
   vn: string
   meds: VisitMedItem[]
   dispensingConfirmed: boolean
+  isAbsent?: boolean
 }
 
 interface MedEdit extends VisitMedItem {
@@ -23,7 +27,7 @@ interface MedEdit extends VisitMedItem {
   _uiKey: string
 }
 
-export function DrugConfirmationPanel({ vn, meds, dispensingConfirmed }: DrugConfirmationPanelProps) {
+export function DrugConfirmationPanel({ vn, meds, dispensingConfirmed, isAbsent }: DrugConfirmationPanelProps) {
   const saveMutation = useVisitMedsSave()
   const keyCounter = useRef(0)
   const makeKey = () => `med-${++keyCounter.current}`
@@ -32,39 +36,55 @@ export function DrugConfirmationPanel({ vn, meds, dispensingConfirmed }: DrugCon
     () => meds.map((m) => ({ ...m, _uiKey: m.med_id || makeKey() })),
   )
   const [hasEdits, setHasEdits] = useState(false)
+  const saveHandledRef = useRef(false)
+
+  // Reset saveHandledRef when a new mutation starts
+  if (saveMutation.isPending) saveHandledRef.current = false
+
+  // Readonly after confirmed or absent — use undo button to revert
+  const isReadonly = dispensingConfirmed || !!isAbsent
+
+  const activeMeds = useMemo(() => meds.filter((m) => m.status !== 'cancelled'), [meds])
 
   // Sync editMeds when meds prop changes (e.g. after mutation invalidation)
   useEffect(() => {
     if (!hasEdits) {
-      setEditMeds(meds.map((m) => ({ ...m, _uiKey: m.med_id || makeKey() })))
+      setEditMeds(activeMeds.map((m) => ({ ...m, _uiKey: m.med_id || makeKey() })))
     }
-  }, [meds, hasEdits])
+  }, [activeMeds, hasEdits])
 
-  // Reset edit state after successful save so sync effect can pick up fresh data
+  // Reset hasEdits after successful save and immediately sync fresh data
+  // Combined into one effect to avoid race condition between reset and sync
   useEffect(() => {
-    if (saveMutation.isSuccess) {
+    if (saveMutation.isSuccess && !saveHandledRef.current) {
+      saveHandledRef.current = true
       setHasEdits(false)
+      setEditMeds(activeMeds.map((m) => ({ ...m, _uiKey: m.med_id || makeKey() })))
     }
-  }, [saveMutation.isSuccess])
+  }, [saveMutation.isSuccess, activeMeds])
 
-  const markEdited = () => setHasEdits(true)
+  const markEdited = () => { if (!isReadonly) setHasEdits(true) }
 
   const handleSourceChange = (idx: number, source: DrugSource) => {
+    if (isReadonly) return
     setEditMeds((prev) => prev.map((m, i) => (i === idx ? { ...m, source } : m)))
     markEdited()
   }
 
   const handleNoteChange = (idx: number, note: string) => {
+    if (isReadonly) return
     setEditMeds((prev) => prev.map((m, i) => (i === idx ? { ...m, note } : m)))
     markEdited()
   }
 
   const handleFieldChange = (idx: number, field: keyof MedEdit, value: string | number) => {
+    if (isReadonly) return
     setEditMeds((prev) => prev.map((m, i) => (i === idx ? { ...m, [field]: value } : m)))
     markEdited()
   }
 
   const handleAddMed = (drug?: { drug_name: string; strength: string; unit: string }) => {
+    if (isReadonly) return
     // Prevent duplicate drug (same drug_name + strength) in same patient
     if (drug?.drug_name) {
       const key = `${drug.drug_name.toLowerCase()}|${(drug.strength ?? '').toLowerCase()}`
@@ -86,7 +106,7 @@ export function DrugConfirmationPanel({ vn, meds, dispensingConfirmed }: DrugCon
         qty: 1,
         unit: drug?.unit ?? '',
         sig: '',
-        source: 'hosp_stock' as DrugSource,
+        source: 'hosp_stock',
         is_changed: 'N',
         round: 1,
         status: '',
@@ -101,6 +121,7 @@ export function DrugConfirmationPanel({ vn, meds, dispensingConfirmed }: DrugCon
   }
 
   const handleRemoveMed = (idx: number) => {
+    if (isReadonly) return
     setEditMeds((prev) =>
       prev.map((m, i) => (i === idx ? { ...m, isRemoved: true } : m))
     )
@@ -108,6 +129,7 @@ export function DrugConfirmationPanel({ vn, meds, dispensingConfirmed }: DrugCon
   }
 
   const handleRestoreMed = (idx: number) => {
+    if (isReadonly) return
     setEditMeds((prev) => prev.map((m, i) => (i === idx ? { ...m, isRemoved: false } : m)))
     markEdited()
   }
@@ -146,8 +168,30 @@ export function DrugConfirmationPanel({ vn, meds, dispensingConfirmed }: DrugCon
     })
   }
 
+  const handleUndoAbsent = () => {
+    saveMutation.mutate({
+      vn,
+      action_type: 'undo_absent',
+      meds: [],
+    })
+  }
+
+  const handleUndoConfirm = () => {
+    saveMutation.mutate({
+      vn,
+      action_type: 'undo_confirm',
+      meds: [],
+    })
+  }
+
   return (
-    <div className="grid gap-3">
+    <div className="relative grid gap-3">
+      {/* Loading overlay */}
+      {saveMutation.isPending && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-background/60 backdrop-blur-[2px]">
+          <LoadingSpinner text="กำลังบันทึก..." className="py-4" />
+        </div>
+      )}
       {/* Drug list */}
       {editMeds.length === 0 && (
         <div className="text-sm text-muted-foreground py-2">ไม่มีรายการยา</div>
@@ -161,7 +205,7 @@ export function DrugConfirmationPanel({ vn, meds, dispensingConfirmed }: DrugCon
               <th className="px-3 py-1.5 text-left font-semibold">จำนวน</th>
               <th className="px-3 py-1.5 text-left font-semibold">แหล่งยา</th>
               <th className="px-3 py-1.5 text-left font-semibold">หมายเหตุ</th>
-              {!dispensingConfirmed && (
+              {!isReadonly && (
                 <th className="px-3 py-1.5 w-10" />
               )}
             </tr>
@@ -176,26 +220,26 @@ export function DrugConfirmationPanel({ vn, meds, dispensingConfirmed }: DrugCon
                       <div className="text-xs text-muted-foreground">{med.strength} · {med.sig}</div>
                       <StatusBadge variant="inactive">ยกเลิก</StatusBadge>
                     </div>
-                  ) : med.isNew && !dispensingConfirmed ? (
+                  ) : !isReadonly && med.isNew ? (
                     <div className="grid gap-1">
                       <Input
                         value={med.drug_name}
                         onChange={(e) => handleFieldChange(idx, 'drug_name', e.target.value)}
                         className="text-xs h-7"
-                        placeholder="ชื่อยา"
+                        placeholder="เช่น Metformin"
                       />
                       <div className="flex gap-1">
                         <Input
                           value={med.strength}
                           onChange={(e) => handleFieldChange(idx, 'strength', e.target.value)}
                           className="text-xs h-7 flex-1"
-                          placeholder="ความแรง"
+                          placeholder="เช่น 500 mg"
                         />
                         <Input
                           value={med.sig}
                           onChange={(e) => handleFieldChange(idx, 'sig', e.target.value)}
                           className="text-xs h-7 flex-1"
-                          placeholder="วิธีใช้"
+                          placeholder="เช่น 1 เม็ด เช้าและเย็นหลังอาหาร"
                         />
                       </div>
                     </div>
@@ -212,21 +256,31 @@ export function DrugConfirmationPanel({ vn, meds, dispensingConfirmed }: DrugCon
                 <td className="px-3 py-1.5">
                   {med.isRemoved ? (
                     <span className="text-muted-foreground">{med.qty} {med.unit}</span>
-                  ) : med.isNew && !dispensingConfirmed ? (
+                  ) : !isReadonly && med.isNew ? (
                     <div className="flex gap-1 items-center">
                       <Input
                         type="number"
                         min={1}
                         value={med.qty}
-                        onChange={(e) => handleFieldChange(idx, 'qty', Number(e.target.value) || 1)}
+                        onChange={(e) => handleFieldChange(idx, 'qty', Math.max(1, Number(e.target.value) || 1))}
                         className="text-xs h-7 w-16"
+                        placeholder="จำนวน"
                       />
-                      <Input
-                        value={med.unit}
-                        onChange={(e) => handleFieldChange(idx, 'unit', e.target.value)}
-                        className="text-xs h-7 w-16"
-                        placeholder="หน่วย"
-                      />
+                      <Select
+                        value={med.unit || undefined}
+                        onValueChange={(v) => handleFieldChange(idx, 'unit', v)}
+                      >
+                        <SelectTrigger className="text-xs h-7 w-auto min-w-28">
+                          <SelectValue placeholder="เลือกหน่วย" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DRUG_UNITS.map((u) => (
+                            <SelectItem key={u.value} value={u.value}>
+                              {u.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   ) : (
                     `${med.qty} ${med.unit}`
@@ -236,7 +290,7 @@ export function DrugConfirmationPanel({ vn, meds, dispensingConfirmed }: DrugCon
                   <DrugSourceSelector
                     value={med.source as DrugSource}
                     onChange={(s) => handleSourceChange(idx, s)}
-                    disabled={dispensingConfirmed || med.isRemoved}
+                    disabled={isReadonly || med.isRemoved}
                     variant={med.isNew || med.source === 'hosp_pending' ? 'new' : 'existing'}
                   />
                 </td>
@@ -245,12 +299,12 @@ export function DrugConfirmationPanel({ vn, meds, dispensingConfirmed }: DrugCon
                     value={med.note}
                     onChange={(e) => handleNoteChange(idx, e.target.value)}
                     rows={1}
-                    className="text-xs min-h-[28px]"
+                    className="text-xs min-h-7"
                     placeholder="หมายเหตุ..."
-                    disabled={dispensingConfirmed || !!med.isRemoved}
+                    disabled={isReadonly || !!med.isRemoved}
                   />
                 </td>
-                {!dispensingConfirmed && (
+                {!isReadonly && (
                   <td className="px-1 py-1.5">
                     {med.isRemoved ? (
                       <Button
@@ -285,7 +339,7 @@ export function DrugConfirmationPanel({ vn, meds, dispensingConfirmed }: DrugCon
       )}
 
       {/* Add drug — search from master + manual fallback */}
-      {!dispensingConfirmed && (
+      {!isReadonly && !isAbsent && (
         <div className="grid gap-2">
           <DrugSearchInput onSelect={(drug) => handleAddMed(drug)} />
           <Button
@@ -303,7 +357,35 @@ export function DrugConfirmationPanel({ vn, meds, dispensingConfirmed }: DrugCon
 
       {/* Action buttons */}
       <div className="flex items-center gap-2 flex-wrap">
-        {!dispensingConfirmed && (
+        {dispensingConfirmed && !isAbsent && (
+          <>
+            <StatusBadge variant="active">ยืนยันแล้ว</StatusBadge>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleUndoConfirm}
+              disabled={saveMutation.isPending}
+            >
+              <RotateCcw className="h-3.5 w-3.5 mr-1" />
+              {saveMutation.isPending ? 'กำลังย้อนสถานะ...' : 'ย้อนสถานะ'}
+            </Button>
+          </>
+        )}
+        {isAbsent && (
+          <>
+            <StatusBadge variant="inactive">ไม่มารับบริการ</StatusBadge>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleUndoAbsent}
+              disabled={saveMutation.isPending}
+            >
+              <Undo2 className="h-3.5 w-3.5 mr-1" />
+              {saveMutation.isPending ? 'กำลังย้อนสถานะ...' : 'ผู้ป่วยมาแล้ว'}
+            </Button>
+          </>
+        )}
+        {!dispensingConfirmed && !isAbsent && (
           <>
             <Button
               size="sm"
@@ -324,9 +406,6 @@ export function DrugConfirmationPanel({ vn, meds, dispensingConfirmed }: DrugCon
               ไม่มารับบริการ
             </Button>
           </>
-        )}
-        {dispensingConfirmed && (
-          <StatusBadge variant="active">ยืนยันแล้ว</StatusBadge>
         )}
       </div>
     </div>

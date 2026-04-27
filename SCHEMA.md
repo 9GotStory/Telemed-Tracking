@@ -193,6 +193,9 @@ GAS คำนวณ realtime: `นับ VISIT_SUMMARY ที่ service_date + 
 | diff_status | text | | `pending` / `matched` / `mismatch` |
 | confirmed_by | text | | user_id ที่ยืนยัน |
 | confirmed_at | datetime | | |
+| drug_sent_date | date | | วันที่ รพ. จัดส่งยา (staff_hosp/admin_hosp บันทึก) |
+| drug_received_date | date | | วันที่ รพ.สต. ได้รับยา (staff_hsc บันทึก) |
+| drug_delivered_date | date | | วันที่ส่งมอบยาให้คนไข้ (staff_hsc บันทึก) |
 
 **Design decision:** VISIT_SUMMARY เชื่อมกับ CLINIC_SCHEDULE ผ่าน `service_date + hosp_code + clinic_type` แทน `schedule_id` เพื่อความยืดหยุ่น หากในอนาคตต้องการ link ตรง ให้เพิ่ม `schedule_id` FK
 
@@ -363,6 +366,9 @@ interface VisitSummary {
   diff_status?: DiffStatus
   confirmed_by?: string
   confirmed_at?: string
+  drug_sent_date: string
+  drug_received_date: string
+  drug_delivered_date: string
 }
 
 interface VisitMed {

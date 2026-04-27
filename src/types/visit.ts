@@ -25,6 +25,9 @@ export interface VisitSummary {
   diff_status: DiffStatus | ''
   confirmed_by: string | null
   confirmed_at: string | null
+  drug_sent_date: string
+  drug_received_date: string
+  drug_delivered_date: string
 }
 
 /** VisitSummary without sensitive fields (used in Module 5) */

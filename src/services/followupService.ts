@@ -46,6 +46,9 @@ const followupItemSchema = z.object({
   followup_status: z.enum(['pending', 'followed']),
   followup_records: z.array(followupRecordSchema),
   meds: z.array(followupMedSchema),
+  drug_sent_date: z.string(),
+  drug_received_date: z.string(),
+  drug_delivered_date: z.string(),
 })
 
 const followupListSchema = z.array(followupItemSchema)

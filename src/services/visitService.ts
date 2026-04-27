@@ -18,6 +18,9 @@ const visitSummaryItemSchema = z.object({
   drug_source_pending: z.string(),
   dispensing_confirmed: z.string(),
   diff_status: z.string(),
+  drug_sent_date: z.string(),
+  drug_received_date: z.string(),
+  drug_delivered_date: z.string(),
 })
 
 const visitSummaryListSchema = z.array(visitSummaryItemSchema)
@@ -78,7 +81,20 @@ export interface MedSaveItem {
   status?: string
 }
 
-export type MedActionType = 'confirm_all' | 'edit' | 'absent'
+export type MedActionType = 'confirm_all' | 'edit' | 'absent' | 'undo_absent' | 'undo_confirm'
+
+export interface BatchConfirmPayload {
+  action: 'confirm' | 'absent'
+  vns: string[]
+}
+
+export type DeliveryField = 'drug_sent_date' | 'drug_received_date' | 'drug_delivered_date'
+
+export interface TrackDeliveryPayload {
+  vn: string
+  field: DeliveryField
+  date: string
+}
 
 export interface VisitMedsSavePayload {
   vn: string
@@ -110,5 +126,17 @@ export const visitService = {
   async saveMeds(payload: VisitMedsSavePayload): Promise<{ message: string }> {
     const raw = await gasPost<unknown>('visitMeds.save', payload)
     return messageResponseSchema.parse(raw)
+  },
+
+  /** Batch confirm or absent multiple VNs at once */
+  async batchConfirm(payload: BatchConfirmPayload): Promise<{ message: string; updated: number }> {
+    const raw = await gasPost<unknown>('visitMeds.batchConfirm', payload)
+    return z.object({ message: z.string(), updated: z.number() }).parse(raw)
+  },
+
+  /** Track drug delivery — update delivery date fields */
+  async trackDelivery(payload: TrackDeliveryPayload): Promise<{ message: string; vn: string; field: string; date: string }> {
+    const raw = await gasPost<unknown>('visitMeds.trackDelivery', payload)
+    return z.object({ message: z.string(), vn: z.string(), field: z.string(), date: z.string() }).parse(raw)
   },
 }

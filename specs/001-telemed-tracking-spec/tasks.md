@@ -505,9 +505,10 @@ Phase 10: T112-T126  (Users + Settings)
 
 ### Estimated Scope
 
-- **Total tasks**: 172 (Phase 1-12: 136 + Phase 13: 16 + Phase 14: 9 + Phase 15: 10 + T130 still open)
+- **Total tasks**: 172 (Phase 1-12: 136 + Phase 13: 16 + Phase 14: 9 + Phase 15: 10 + T130 still open) + Phase 16: 9
 - **MVP tasks** (Phases 1-3 + 5-8): ~101 tasks
 - **Post-MVP tasks** (Phases 4, 9-11): ~35 tasks
+- **Enhancement tasks** (Phase 16): 9 tasks
 - **Per user story**:
   - US1 (P1): Phases 6+7+8 = ~39 tasks (core workflow)
   - US2 (P1): Embedded in Phase 7 = ~6 tasks (staff_hsc perspective)
@@ -515,6 +516,43 @@ Phase 10: T112-T126  (Users + Settings)
   - US4 (P2): Phase 4 = ~7 tasks (equipment)
   - US5 (P3): Phase 9 = ~10 tasks (dashboard)
   - US6 (P3): Phase 10 = ~15 tasks (settings+users)
+  - Enhancement: Phase 16 = 9 tasks (drug delivery tracking)
+
+---
+
+## Phase 16: Drug Pending Tracking (ยาที่รอส่งจากรพ.)
+
+**Purpose**: Track the full lifecycle of drugs with `source=hosp_pending` — from hospital dispatch to sub-district hospital receipt to patient delivery.
+
+**Business Context**: When a drug is marked `hosp_pending`, it means the main hospital (รพ.สอง) needs to send it to the sub-district hospital (รพ.สต.). Currently there is no tracking of when the hospital dispatches, when the sub-district receives, or when the patient finally gets the medication. This phase adds end-to-end visibility.
+
+**User Stories**:
+- staff_hosp/admin_hosp: Want to see which รพ.สต. haven't received pending drugs yet, and mark drugs as dispatched
+- staff_hsc: Want to confirm receipt of drugs and mark delivery to patient
+- super_admin: Want full visibility of the drug delivery pipeline
+
+**Design Decisions**:
+- Add 3 date fields to VISIT_SUMMARY (not a new sheet) — keeps schema simple, one row per VN
+- `drug_sent_date`: filled by staff_hosp/admin_hosp when dispatching
+- `drug_received_date`: filled by staff_hsc when receiving
+- `drug_delivered_date`: filled by staff_hsc when patient receives medication
+- Filter by `drug_source_pending = 'Y'` to scope the tracking view
+- New GAS action `visitMeds.trackDelivery` for date updates with role-based field restrictions
+- New frontend page section in Module 5 (filterable list) or a dedicated sub-page
+
+---
+
+- [x] T189 [US1] Add delivery tracking columns to VISIT_SUMMARY sheet — In `backend/Code.gs`: add 3 new columns to VISIT_SUMMARY_COLS constant: `drug_sent_date` (index 17), `drug_received_date` (index 18), `drug_delivered_date` (index 19). Update VISIT_SUMMARY_COLS mapping. Update `setupSheets()` header row to include these columns. File: `backend/Code.gs`
+- [x] T190 [US1] Add GAS action `visitMeds.trackDelivery` — In `backend/Code.gs`: new handler `handleVisitMedsTrackDelivery(user, data)`. Accepts `{ vn, field, date }` where field is `drug_sent_date`|`drug_received_date`|`drug_delivered_date`. Role restrictions: `staff_hosp`/`admin_hosp` can only set `drug_sent_date`. `staff_hsc` can only set `drug_received_date` and `drug_delivered_date` (and only for own hosp_code). `super_admin` can set any field. Validate VN exists and `drug_source_pending = 'Y'`. Register in router. File: `backend/Code.gs`
+- [x] T191 [P] [US1] Update VISIT_SUMMARY response to include delivery fields — In `backend/Code.gs`: update `handleVisitSummaryList` and `handleVisitMedsList` to include `drug_sent_date`, `drug_received_date`, `drug_delivered_date` in response objects. Default to empty string if not set. File: `backend/Code.gs`
+- [x] T192 [P] [US1] Update Zod schemas and types for delivery tracking — In `src/services/visitService.ts`: add `drug_sent_date`, `drug_received_date`, `drug_delivered_date` (all `z.string()`) to `visitSummaryItemSchema`. In `src/types/visit.ts`: document the new fields in VisitSummary type. File: `src/services/visitService.ts`, `src/types/visit.ts`
+- [x] T193 [US1] Create `useDrugTracking` hook — In `src/modules/module5/useDrugTracking.ts`: `useUpdateDeliveryDate()` mutation hook that calls `visitMeds.trackDelivery` GAS action. Includes TanStack Query invalidation for visit keys. Toast success/error. File: `src/modules/module5/useDrugTracking.ts`
+- [x] T194 [US1] Create `DrugTrackingStatus` component — In `src/modules/module5/DrugTrackingStatus.tsx`: compact tracking timeline component. Shows 3 stages (รพ.จัดส่ง → รพ.สต.ได้รับ → ส่งมอบให้คนไข้) with date display and action button per stage based on user role. Uses `useUpdateDeliveryDate` hook. DatePicker for date input. File: `src/modules/module5/DrugTrackingStatus.tsx`
+- [x] T195 [US1] Integrate tracking status into PatientCard — In `src/modules/module5/PatientList.tsx`: when patient has `drug_source_pending = 'Y'`, show `<DrugTrackingStatus>` inside the expanded panel below the drug table. Pass delivery dates and role from auth store. File: `src/modules/module5/PatientList.tsx`
+- [x] T196 [P] [US1] Add pending drugs filter to DrugConfirmPage — In `src/modules/module5/DrugConfirmPage.tsx`: add a status filter dropdown (ทั้งหมด / รอยืนยัน / ยืนยันแล้ว / ไม่มา / รอส่งยา) that filters the patient list by `dispensing_confirmed`, `attended`, and `drug_source_pending` fields. Default to "ทั้งหมด". File: `src/modules/module5/DrugConfirmPage.tsx`
+- [x] T197 [US1] Add delivery summary to Module 6 (Followup) — In `src/modules/module6/`: when viewing a confirmed visit with `drug_source_pending = 'Y'`, show delivery tracking status inline. This gives admin_hosp full visibility from the follow-up tracking view. File: `src/modules/module6/`
+
+**Checkpoint**: Admin can mark drugs as dispatched. รพ.สต. staff can mark receipt and patient delivery. All roles can see the tracking timeline. Filter by pending status works.
 
 ---
 
