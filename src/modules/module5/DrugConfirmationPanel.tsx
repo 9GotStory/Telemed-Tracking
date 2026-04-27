@@ -33,25 +33,29 @@ export function DrugConfirmationPanel({ vn, meds, dispensingConfirmed, isAbsent 
   const makeKey = () => `med-${++keyCounter.current}`
 
   const [editMeds, setEditMeds] = useState<MedEdit[]>(
-    () => meds.map((m) => ({ ...m, _uiKey: m.med_id || makeKey() })),
+    () => meds.map((m, i) => ({ ...m, _uiKey: m.med_id || `med-init-${i}` })),
   )
   const [hasEdits, setHasEdits] = useState(false)
   const saveHandledRef = useRef(false)
 
   // Reset saveHandledRef when a new mutation starts
-  if (saveMutation.isPending) saveHandledRef.current = false
+  useEffect(() => {
+    if (saveMutation.isPending) saveHandledRef.current = false
+  }, [saveMutation.isPending])
 
   // Readonly after confirmed or absent — use undo button to revert
   const isReadonly = dispensingConfirmed || !!isAbsent
 
   const activeMeds = useMemo(() => meds.filter((m) => m.status !== 'cancelled'), [meds])
 
-  // Sync editMeds when meds prop changes (e.g. after mutation invalidation)
-  useEffect(() => {
+  // Sync editMeds when meds prop changes — React recommended render-time pattern
+  const [prevActiveMeds, setPrevActiveMeds] = useState(activeMeds)
+  if (activeMeds !== prevActiveMeds) {
+    setPrevActiveMeds(activeMeds)
     if (!hasEdits) {
-      setEditMeds(activeMeds.map((m) => ({ ...m, _uiKey: m.med_id || makeKey() })))
+      setEditMeds(activeMeds.map((m, i) => ({ ...m, _uiKey: m.med_id || `med-sync-${i}` })))
     }
-  }, [activeMeds, hasEdits])
+  }
 
   // Reset hasEdits after successful save and immediately sync fresh data
   // Combined into one effect to avoid race condition between reset and sync
@@ -59,7 +63,7 @@ export function DrugConfirmationPanel({ vn, meds, dispensingConfirmed, isAbsent 
     if (saveMutation.isSuccess && !saveHandledRef.current) {
       saveHandledRef.current = true
       setHasEdits(false)
-      setEditMeds(activeMeds.map((m) => ({ ...m, _uiKey: m.med_id || makeKey() })))
+      setEditMeds(activeMeds.map((m, i) => ({ ...m, _uiKey: m.med_id || `med-save-${i}` })))
     }
   }, [saveMutation.isSuccess, activeMeds])
 
@@ -268,7 +272,7 @@ export function DrugConfirmationPanel({ vn, meds, dispensingConfirmed, isAbsent 
                       />
                       <Select
                         value={med.unit || undefined}
-                        onValueChange={(v) => handleFieldChange(idx, 'unit', v)}
+                        onValueChange={(v) => { if (v) handleFieldChange(idx, 'unit', v) }}
                       >
                         <SelectTrigger className="text-xs h-7 w-auto min-w-28">
                           <SelectValue placeholder="เลือกหน่วย" />
