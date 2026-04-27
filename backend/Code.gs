@@ -115,6 +115,7 @@ var CLINIC_SCHEDULE_COLS = {
   link_added_by: 7,
   incident_note: 8,
   updated_at: 9,
+  drug_delivery_date: 10,
 };
 
 var READINESS_LOG_COLS = {
@@ -210,6 +211,7 @@ var SHEET_HEADERS = {
   CLINIC_SCHEDULE: [
     "schedule_id", "service_date", "hosp_code", "clinic_type", "service_time",
     "appoint_count", "telemed_link", "link_added_by", "incident_note", "updated_at",
+    "drug_delivery_date",
   ],
   READINESS_LOG: [
     "log_id", "hosp_code", "check_date", "cam_ok", "mic_ok", "pc_ok",
@@ -2143,6 +2145,7 @@ function handleScheduleList(user, params) {
       link_added_by: row[CLINIC_SCHEDULE_COLS.link_added_by] || null,
       incident_note: row[CLINIC_SCHEDULE_COLS.incident_note] || "",
       updated_at: row[CLINIC_SCHEDULE_COLS.updated_at] || "",
+      drug_delivery_date: toDateStr(row[CLINIC_SCHEDULE_COLS.drug_delivery_date]) || "",
       actual_count: actualCount,
     });
   }
@@ -2174,6 +2177,7 @@ function handleScheduleSave(user, data) {
   var clinicType = String(data.clinic_type || "").trim();
   var serviceTime = String(data.service_time || "").trim();
   var appointCount = Number(data.appoint_count) || 0;
+  var drugDeliveryDate = String(data.drug_delivery_date || "").trim();
 
   if (!serviceDate)
     return { success: false, error: "service_date is required" };
@@ -2251,6 +2255,7 @@ function handleScheduleSave(user, data) {
       rows[foundRow - 1][CLINIC_SCHEDULE_COLS.link_added_by] || "",
       rows[foundRow - 1][CLINIC_SCHEDULE_COLS.incident_note] || "",
       now,
+      drugDeliveryDate,
     ];
     ensureTextFormat("CLINIC_SCHEDULE", foundRow);
     sheet.getRange(foundRow, 1, 1, rowData.length).setValues([rowData]);
@@ -2259,7 +2264,7 @@ function handleScheduleSave(user, data) {
   if (isNew) {
     var schedNewRow = sheet.getLastRow() + 1;
     ensureTextFormat("CLINIC_SCHEDULE", schedNewRow);
-    sheet.getRange(schedNewRow, 1, 1, 10).setValues([[
+    sheet.getRange(schedNewRow, 1, 1, 11).setValues([[
       scheduleId,
       serviceDate,
       hospCode,
@@ -2270,6 +2275,7 @@ function handleScheduleSave(user, data) {
       "",
       "",
       now,
+      drugDeliveryDate,
     ]]);
   }
 

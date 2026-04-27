@@ -14,6 +14,7 @@ export const scheduleSchema = z.object({
   clinic_type: z.string().min(1, 'กรุณาเลือกประเภทคลินิก'),
   service_time: z.string().min(1, 'กรุณาระบุเวลา'),
   appoint_count: z.coerce.number().min(0, 'จำนวนไม่ถูกต้อง'),
+  drug_delivery_date: z.string().optional(),
 })
 
 export type ScheduleFormValues = z.infer<typeof scheduleSchema>
@@ -31,6 +32,7 @@ const scheduleItemSchema = z.object({
   link_added_by: z.string().nullable(),
   incident_note: z.string(),
   updated_at: z.string(),
+  drug_delivery_date: z.string().default(''),
   actual_count: z.number(),
 })
 

@@ -59,6 +59,7 @@ function getFormDefaults(
         clinic_type: schedule.clinic_type,
         service_time: schedule.service_time,
         appoint_count: schedule.appoint_count,
+        drug_delivery_date: schedule.drug_delivery_date ?? '',
       }
     : {
         hosp_code: defaultHospCode ?? '',
@@ -66,6 +67,7 @@ function getFormDefaults(
         clinic_type: '',
         service_time: '',
         appoint_count: 0,
+        drug_delivery_date: '',
       }
 }
 
@@ -112,6 +114,7 @@ export function ScheduleForm({ open, onOpenChange, schedule, defaultHospCode, de
   }
 
   const canChooseHosp = user?.role === 'admin_hosp' || user?.role === 'super_admin'
+  const canSetDeliveryDate = user?.role === 'super_admin' || user?.role === 'admin_hosp' || user?.role === 'staff_hosp'
 
   // Service date: DatePicker uses Date, form stores 'yyyy-MM-dd' string
   const serviceDateStr = watch('service_date') ?? ''
@@ -124,6 +127,17 @@ export function ScheduleForm({ open, onOpenChange, schedule, defaultHospCode, de
     if (date) {
       setValue('service_date', format(date, 'yyyy-MM-dd'), { shouldValidate: true })
     }
+  }, [setValue])
+
+  // Drug delivery date: DatePicker uses Date, form stores 'yyyy-MM-dd' string
+  const deliveryDateStr = watch('drug_delivery_date') ?? ''
+  const deliveryDateObj = useMemo(() => {
+    if (!deliveryDateStr) return undefined
+    try { return parseISO(deliveryDateStr) } catch { return undefined }
+  }, [deliveryDateStr])
+
+  const handleDeliveryDateChange = useCallback((date: Date | undefined) => {
+    setValue('drug_delivery_date', date ? format(date, 'yyyy-MM-dd') : '', { shouldValidate: true })
   }, [setValue])
 
   // Watched fields for checklist
@@ -289,6 +303,19 @@ export function ScheduleForm({ open, onOpenChange, schedule, defaultHospCode, de
               <p role="alert" className="text-xs text-destructive">{errors.appoint_count.message}</p>
             )}
           </div>
+
+          {/* Drug Delivery Date — admin/staff_hosp only */}
+          {canSetDeliveryDate && (
+            <div className="grid gap-2">
+              <Label>วันที่จัดส่งยา ไป รพ.สต.</Label>
+              <DatePicker
+                value={deliveryDateObj}
+                onChange={handleDeliveryDateChange}
+                placeholder="เลือกวันที่จัดส่งยา"
+              />
+              <p className="text-xs text-muted-foreground">ไม่บังคับ — กำหนดวันที่ส่งยาไปยัง รพ.สต.</p>
+            </div>
+          )}
 
           {/* Checklist Card */}
           <FormChecklistCard fields={checklistFields} />

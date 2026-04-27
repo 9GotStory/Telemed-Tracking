@@ -10,6 +10,12 @@ interface TelemedLinkInputProps {
   currentLink: string
 }
 
+function ensureProtocol(url: string): string {
+  if (!url) return url
+  if (/^https?:\/\//i.test(url)) return url
+  return `https://${url}`
+}
+
 export function TelemedLinkInput({ scheduleId, currentLink }: TelemedLinkInputProps) {
   const { user } = useAuthStore()
   const [link, setLink] = useState(currentLink)
@@ -41,7 +47,7 @@ export function TelemedLinkInput({ scheduleId, currentLink }: TelemedLinkInputPr
     return (
       <div className="flex items-center gap-2">
         <a
-          href={currentLink}
+          href={ensureProtocol(currentLink)}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 text-sm text-apple-blue hover:underline"
@@ -80,7 +86,7 @@ export function TelemedLinkInput({ scheduleId, currentLink }: TelemedLinkInputPr
       </Button>
       {currentLink && (
         <a
-          href={currentLink}
+          href={ensureProtocol(currentLink)}
           target="_blank"
           rel="noopener noreferrer"
           className="shrink-0"

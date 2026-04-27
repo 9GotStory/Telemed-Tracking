@@ -11,6 +11,7 @@ export interface ClinicSchedule {
   link_added_by: string | null
   incident_note: string
   updated_at: string
+  drug_delivery_date: string
 }
 
 export interface ClinicScheduleWithActual extends ClinicSchedule {

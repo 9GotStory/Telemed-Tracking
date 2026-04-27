@@ -16,15 +16,21 @@ import type { ClinicScheduleWithActual } from '@/types/schedule'
 import { useAuthStore } from '@/stores/authStore'
 import { format, parseISO, addDays } from 'date-fns'
 import { th } from 'date-fns/locale'
-import { Pencil } from 'lucide-react'
+import { Pencil, Users, Video, Truck } from 'lucide-react'
 
 interface ScheduleGridProps {
   data: ClinicScheduleWithActual[]
-  weekStart: Date // Monday of the displayed week
+  weekStart: Date // Monday of the displayed week (or monthStart for staff_hsc)
   onEdit: (item: ClinicScheduleWithActual) => void
 }
 
 const THAI_DAYS = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์']
+
+/** Map JS Date.getDay() (0=Sun) to THAI_DAYS index (Mon=0, Sun=6) */
+function getThaiDayIndex(date: Date): number {
+  const day = date.getDay()
+  return day === 0 ? 6 : day - 1
+}
 
 /** Format "2026-04-26" → "26 เมษายน 2026" with Thai locale fallback */
 function formatThaiDate(dateStr: string): string {
@@ -42,17 +48,36 @@ function getClinicLabel(clinicType: string): string {
 
 export function ScheduleGrid({ data, weekStart, onEdit }: ScheduleGridProps) {
   const { user } = useAuthStore()
+  const isStaffHsc = user?.role === 'staff_hsc'
   const [selectedSchedule, setSelectedSchedule] = useState<ClinicScheduleWithActual | null>(null)
   const [incidentNote, setIncidentNote] = useState('')
   const recordIncidentMutation = useScheduleRecordIncident()
 
-  // Build 7-day columns starting from weekStart (Monday)
+  // Build 7-day columns starting from weekStart (only used for non-staff_hsc)
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
   }, [weekStart])
 
-  // Group schedules by hosp_code
+  // Monthly grouped data for staff_hsc
+  const monthlyDays = useMemo(() => {
+    const grouped = new Map<string, ClinicScheduleWithActual[]>()
+    for (const s of data) {
+      const arr = grouped.get(s.service_date) ?? []
+      arr.push(s)
+      grouped.set(s.service_date, arr)
+    }
+    return Array.from(grouped.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, schedules]) => ({
+        date,
+        thaiDayIdx: getThaiDayIndex(parseISO(date)),
+        schedules,
+      }))
+  }, [data])
+
+  // Group schedules by hosp_code (only used for non-staff_hsc grid)
   const facilities = useMemo(() => {
+    if (isStaffHsc) return []
     const map = new Map<string, string>()
     for (const s of data) {
       if (!map.has(s.hosp_code)) {
@@ -60,10 +85,11 @@ export function ScheduleGrid({ data, weekStart, onEdit }: ScheduleGridProps) {
       }
     }
     return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1], 'th'))
-  }, [data])
+  }, [data, isStaffHsc])
 
-  // Build lookup: hosp_code + date string → schedules
+  // Build lookup: hosp_code + date string → schedules (only used for non-staff_hsc grid)
   const cellMap = useMemo(() => {
+    if (isStaffHsc) return new Map<string, ClinicScheduleWithActual[]>()
     const map = new Map<string, ClinicScheduleWithActual[]>()
     for (const s of data) {
       const key = `${s.hosp_code}|${s.service_date}`
@@ -72,7 +98,7 @@ export function ScheduleGrid({ data, weekStart, onEdit }: ScheduleGridProps) {
       map.set(key, arr)
     }
     return map
-  }, [data])
+  }, [data, isStaffHsc])
 
   const handleOpenDetail = (schedule: ClinicScheduleWithActual) => {
     setSelectedSchedule(schedule)
@@ -99,11 +125,57 @@ export function ScheduleGrid({ data, weekStart, onEdit }: ScheduleGridProps) {
       {/* Empty state */}
       {data.length === 0 && (
         <div className="text-center py-12 text-muted-foreground">
-          ไม่พบตารางคลินิกในสัปดาห์นี้
+          {isStaffHsc ? 'ไม่พบตารางคลินิกในเดือนนี้' : 'ไม่พบตารางคลินิกในสัปดาห์นี้'}
         </div>
       )}
 
-      {data.length > 0 && (
+      {data.length > 0 && isStaffHsc && (
+        /* Monthly list view for staff_hsc — shows all scheduled days in the month */
+        <div className="flex flex-col gap-3">
+          {monthlyDays.map(({ date, thaiDayIdx, schedules: daySchedules }) => (
+            <div key={date} className="rounded-md border">
+              <div className="bg-btn-default-light/50 px-3 py-2 font-semibold text-sm">
+                {THAI_DAYS[thaiDayIdx]} — {formatThaiDate(date)}
+              </div>
+              <div className="divide-y">
+                {daySchedules.map((s) => (
+                  <button
+                    key={s.schedule_id}
+                    type="button"
+                    onClick={() => handleOpenDetail(s)}
+                    className="w-full text-left px-3 py-2 hover:bg-btn-default-light/30 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <StatusBadge variant="info">{getClinicLabel(s.clinic_type)}</StatusBadge>
+                      <span className="text-xs text-muted-foreground">{s.service_time}</span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                      <span className="inline-flex items-center gap-0.5">
+                        <Users className="h-3 w-3" />
+                        {s.actual_count ?? 0}/{s.appoint_count}
+                      </span>
+                      {s.telemed_link && (
+                        <span className="inline-flex items-center gap-0.5 text-apple-blue">
+                          <Video className="h-3 w-3" />
+                          Telemed
+                        </span>
+                      )}
+                      {s.drug_delivery_date && (
+                        <span className="inline-flex items-center gap-0.5 text-emerald-500">
+                          <Truck className="h-3 w-3" />
+                          {formatThaiDate(s.drug_delivery_date)}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {data.length > 0 && !isStaffHsc && (
         <>
           {/* Desktop: Weekly grid table */}
           <div className="hidden md:block overflow-x-auto rounded-md border">
@@ -147,12 +219,20 @@ export function ScheduleGrid({ data, weekStart, onEdit }: ScheduleGridProps) {
                               <div className="text-xs text-muted-foreground">
                                 {s.service_time}
                               </div>
-                              <div className="flex items-center gap-1 text-xs">
-                                <span className="text-muted-foreground">
+                              <div className="flex items-center gap-1.5 text-xs mt-0.5">
+                                <span className="inline-flex items-center gap-0.5 text-muted-foreground" title="ผู้ป่วย">
+                                  <Users className="h-3 w-3" />
                                   {s.actual_count ?? 0}/{s.appoint_count}
                                 </span>
                                 {s.telemed_link && (
-                                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-apple-blue" title="มีลิงก์ Telemed" />
+                                  <span title="มีลิงก์ Telemed">
+                                    <Video className="h-3 w-3 text-apple-blue" />
+                                  </span>
+                                )}
+                                {s.drug_delivery_date && (
+                                  <span title={`จัดส่งยา ${formatThaiDate(s.drug_delivery_date)}`}>
+                                    <Truck className="h-3 w-3 text-emerald-500" />
+                                  </span>
                                 )}
                               </div>
                             </button>
@@ -190,9 +270,15 @@ export function ScheduleGrid({ data, weekStart, onEdit }: ScheduleGridProps) {
                         </div>
                         <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
                           <span>{s.service_time}</span>
-                          <span>ผู้ป่วย {s.actual_count ?? 0}/{s.appoint_count}</span>
+                          <span className="inline-flex items-center gap-0.5">
+                            <Users className="h-3 w-3" />
+                            {s.actual_count ?? 0}/{s.appoint_count}
+                          </span>
                           {s.telemed_link && (
-                            <span className="inline-block h-1.5 w-1.5 rounded-full bg-apple-blue" />
+                            <Video className="h-3 w-3 text-apple-blue" />
+                          )}
+                          {s.drug_delivery_date && (
+                            <Truck className="h-3 w-3 text-emerald-500" />
                           )}
                         </div>
                       </button>
@@ -242,6 +328,12 @@ export function ScheduleGrid({ data, weekStart, onEdit }: ScheduleGridProps) {
                   <span className="text-muted-foreground">มารับบริการ</span>
                   <div className="font-medium">{selectedSchedule.actual_count ?? 0} คน</div>
                 </div>
+                {selectedSchedule.drug_delivery_date && (
+                  <div className="col-span-2">
+                    <span className="text-muted-foreground">วันที่จัดส่งยา ไป รพ.สต.</span>
+                    <div className="font-medium">{formatThaiDate(selectedSchedule.drug_delivery_date)}</div>
+                  </div>
+                )}
               </div>
 
               {/* Telemed Link */}

@@ -147,6 +147,7 @@ Master รหัสสถานพยาบาล ใช้ตรวจสอบ
 | link_added_by | text | | FK → USERS.user_id (ผู้แนบ link) |
 | incident_note | text | | เหตุขัดข้องระหว่างบริการ |
 | updated_at | datetime | ✔ | |
+| drug_delivery_date | date | | วันที่จัดส่งยา ไป รพ.สต. (กำหนดโดย super_admin / admin_hosp / staff_hosp) |
 
 **หมายเหตุ:** `actual_count` ไม่เก็บที่นี่
 GAS คำนวณ realtime: `นับ VISIT_SUMMARY ที่ service_date + hosp_code + clinic_type ตรงกัน และ attended = Y`
@@ -428,6 +429,7 @@ interface ClinicSchedule {
   link_added_by?: string // user_id
   incident_note?: string
   updated_at: string
+  drug_delivery_date: string // วันที่จัดส่งยา ไป รพ.สต. (YYYY-MM-DD)
   actual_count?: number  // computed จาก VISIT_SUMMARY ไม่เก็บใน Sheet
   // หมายเหตุ: ไม่มี updated_by เพราะ link_added_by เป็น field เดียวที่ track ผู้แก้ไข link
 }
