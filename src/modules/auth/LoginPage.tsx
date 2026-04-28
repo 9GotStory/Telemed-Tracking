@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/stores/authStore'
 import { useLogin } from '@/hooks/useAuth'
+import { getRoleHomePath } from '@/hooks/useAuth'
 import { loginSchema, type LoginFormValues } from '@/services/authService'
 import { useDebugMount } from '@/hooks/useDebugLog'
 import { HospCodeSelect } from '@/components/common/HospCodeSelect'
@@ -38,8 +39,8 @@ export default function LoginPage() {
     })
   }
 
-  // Already logged in → redirect to first module (after all hooks)
-  if (user) return <Navigate to="/module1" replace />
+  // Already logged in → redirect to role-appropriate home
+  if (user) return <Navigate to={getRoleHomePath(user.role)} replace />
 
   return (
     <Card className="w-full max-w-sm">

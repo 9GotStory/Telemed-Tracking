@@ -10,7 +10,7 @@ import { useVisitMedsSave } from './useDrugConfirm'
 import type { VisitMedItem } from '@/services/visitService'
 import type { DrugSource } from '@/types/visit'
 import { CheckCircle2, XCircle, Plus, Trash2, RotateCcw, Undo2 } from 'lucide-react'
-import { LoadingSpinner } from '@/components/common/LoadingSpinner'
+import { LoadingOverlay } from '@/components/common/LoadingOverlay'
 import { DrugSearchInput } from './DrugSearchInput'
 import { DRUG_UNITS } from '@/constants/drugUnits'
 
@@ -93,7 +93,7 @@ export function DrugConfirmationPanel({ vn, meds, dispensingConfirmed, isAbsent 
     if (drug?.drug_name) {
       const key = `${drug.drug_name.toLowerCase()}|${(drug.strength ?? '').toLowerCase()}`
       const exists = editMeds.some(
-        (m) => !m.isRemoved && `${m.drug_name.toLowerCase()}|${m.strength.toLowerCase()}` === key,
+        (m) => !m.isRemoved && `${m.drug_name.toLowerCase()}|${(m.strength ?? '').toLowerCase()}` === key,
       )
       if (exists) {
         toast.error(`${drug.drug_name} ${drug.strength} มีอยู่แล้ว`)
@@ -189,13 +189,7 @@ export function DrugConfirmationPanel({ vn, meds, dispensingConfirmed, isAbsent 
   }
 
   return (
-    <div className="relative grid gap-3">
-      {/* Loading overlay */}
-      {saveMutation.isPending && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-background/60 backdrop-blur-[2px]">
-          <LoadingSpinner text="กำลังบันทึก..." className="py-4" />
-        </div>
-      )}
+    <LoadingOverlay loading={saveMutation.isPending} text="กำลังบันทึก..." className="grid gap-3">
       {/* Drug list */}
       {editMeds.length === 0 && (
         <div className="text-sm text-muted-foreground py-2">ไม่มีรายการยา</div>
@@ -412,6 +406,6 @@ export function DrugConfirmationPanel({ vn, meds, dispensingConfirmed, isAbsent 
           </>
         )}
       </div>
-    </div>
+    </LoadingOverlay>
   )
 }

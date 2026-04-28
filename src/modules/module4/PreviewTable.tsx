@@ -91,7 +91,7 @@ export function PreviewTable({ rows, groupedByVN, previewResult, invalidRows = {
                 </td>
                 {idx === 0 ? (
                   <td rowSpan={vRows.length} className="px-3 py-1.5 align-top">
-                    <StatusBadge variant={isError ? 'inactive' : 'active'}>
+                    <StatusBadge variant={isError ? 'error' : 'active'}>
                       {isError ? 'ผิดพลาด' : 'ถูกต้อง'}
                     </StatusBadge>
                     <div className="mt-1 text-xs text-muted-foreground">

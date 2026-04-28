@@ -14,6 +14,7 @@ const followupRecordSchema = z.object({
   drug_adherence: z.string(),
   other_note: z.string(),
   recorded_by: z.string(),
+  recorded_by_name: z.string().default(''),
   recorded_at: z.string(),
 })
 
@@ -34,6 +35,7 @@ const followupMedSchema = z.object({
 const followupItemSchema = z.object({
   vn: z.string(),
   patient_name: z.string(),
+  dob: z.string().default(''),
   tel: z.string(),
   hn: z.string(),
   hosp_code: z.string(),
@@ -57,6 +59,10 @@ const followupSaveResponseSchema = z.object({
   followup_id: z.string(),
 })
 
+const followupDeleteResponseSchema = z.object({
+  success: z.boolean(),
+})
+
 // Save form schema
 export const followupSchema = z.object({
   vn: z.string().min(1, 'กรุณาระบุ VN'),
@@ -68,6 +74,13 @@ export const followupSchema = z.object({
 })
 
 export type FollowupFormValues = z.infer<typeof followupSchema>
+
+// Update form schema (includes followup_id for editing)
+const followupUpdateSchema = followupSchema.extend({
+  followup_id: z.string().min(1, 'กรุณาระบุ followup_id'),
+})
+
+export type FollowupUpdateValues = z.infer<typeof followupUpdateSchema>
 
 // ---------------------------------------------------------------------------
 // Exported Types
@@ -85,6 +98,8 @@ export interface FollowupFilters {
   status?: 'pending' | 'followed'
   hosp_code?: string
   service_date?: string
+  patient_name?: string
+  clinic_type?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -98,6 +113,8 @@ export const followupService = {
     if (filters.status) params.status = filters.status
     if (filters.hosp_code) params.hosp_code = filters.hosp_code
     if (filters.service_date) params.service_date = filters.service_date
+    if (filters.patient_name) params.patient_name = filters.patient_name
+    if (filters.clinic_type) params.clinic_type = filters.clinic_type
     const raw = await gasGet<unknown>('followup.list', params)
     return followupListSchema.parse(raw)
   },
@@ -106,5 +123,17 @@ export const followupService = {
   async save(data: FollowupFormValues): Promise<{ followup_id: string }> {
     const raw = await gasPost<unknown>('followup.save', data)
     return followupSaveResponseSchema.parse(raw)
+  },
+
+  /** Update an existing followup record */
+  async update(data: FollowupUpdateValues): Promise<{ followup_id: string }> {
+    const raw = await gasPost<unknown>('followup.update', data)
+    return followupSaveResponseSchema.parse(raw)
+  },
+
+  /** Delete a followup record */
+  async delete(followupId: string): Promise<{ success: boolean }> {
+    const raw = await gasPost<unknown>('followup.delete', { followup_id: followupId })
+    return followupDeleteResponseSchema.parse(raw)
   },
 }

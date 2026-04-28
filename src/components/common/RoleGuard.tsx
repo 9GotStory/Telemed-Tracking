@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import { ShieldX } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/stores/authStore'
+import { getRoleHomePath } from '@/hooks/useAuth'
 import type { UserRole } from '@/types/user'
 
 interface RoleGuardProps {
@@ -31,6 +32,7 @@ export function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
 
 function AccessDenied() {
   const navigate = useNavigate()
+  const user = useAuthStore((s) => s.user)
 
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
@@ -44,7 +46,7 @@ function AccessDenied() {
             คุณไม่มีสิทธิ์ในการเข้าถึงหน้านี้ กรุณาติดต่อผู้ดูแลระบบ
           </p>
         </div>
-        <Button variant="outline" onClick={() => navigate('/module1')}>
+        <Button variant="outline" onClick={() => navigate(user ? getRoleHomePath(user.role) : '/login')}>
           กลับหน้าหลัก
         </Button>
       </div>

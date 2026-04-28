@@ -11,11 +11,11 @@ interface StatusBadgeProps {
 const VARIANT_STYLES: Record<StatusVariant, string> = {
   active: 'bg-apple-blue text-white',
   ready: 'bg-apple-blue text-white',
-  pending: 'bg-btn-default-light text-primary',
-  warning: 'bg-btn-default-light text-primary',
-  inactive: 'bg-near-black text-white',
-  error: 'bg-near-black text-white',
-  info: 'bg-btn-default-light text-primary',
+  pending: 'bg-amber-100 text-amber-800',
+  warning: 'bg-orange-100 text-orange-700',
+  inactive: 'bg-zinc-600 text-white',
+  error: 'bg-red-100 text-red-800',
+  info: 'bg-zinc-100 text-zinc-700',
 }
 
 export function StatusBadge({ variant, children, className }: StatusBadgeProps) {

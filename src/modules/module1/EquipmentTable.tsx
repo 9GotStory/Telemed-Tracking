@@ -11,10 +11,10 @@ interface EquipmentTableProps {
   showHospName: boolean
 }
 
-const statusMap: Record<string, { variant: 'active' | 'pending' | 'inactive'; label: string }> = {
+const statusMap: Record<string, { variant: 'active' | 'pending' | 'inactive' | 'error'; label: string }> = {
   ready: { variant: 'active', label: 'พร้อมใช้งาน' },
   maintenance: { variant: 'pending', label: 'ซ่อมบำรุง' },
-  broken: { variant: 'inactive', label: 'ชำรุด' },
+  broken: { variant: 'error', label: 'ชำรุด' },
   inactive: { variant: 'inactive', label: 'ไม่ใช้งาน' },
 }
 

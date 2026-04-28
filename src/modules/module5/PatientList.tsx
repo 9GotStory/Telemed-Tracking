@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
+import { EditablePhone } from '@/components/common/EditablePhone'
 import { Button } from '@/components/ui/button'
 import { DrugConfirmationPanel } from './DrugConfirmationPanel'
 import { DrugTrackingStatus } from './DrugTrackingStatus'
@@ -242,6 +243,11 @@ function PatientCard({
       {/* Expanded content */}
       {isExpanded && (
         <div className="px-4 pb-3 border-t">
+          {/* Tel verification */}
+          <div className="pt-2 pb-1 text-sm grid grid-cols-[auto_1fr] gap-x-3 items-center">
+            <span className="text-muted-foreground">เบอร์โทร</span>
+            <EditablePhone tel={patient.tel} vn={patient.vn} />
+          </div>
           {medsQuery.isLoading ? (
             <LoadingSpinner text="กำลังโหลดยา..." />
           ) : medsQuery.isError ? (

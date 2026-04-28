@@ -1007,6 +1007,9 @@ function routeAction(action, data, user) {
     "visitSummary.list": function () {
       return handleVisitSummaryList(user, data);
     },
+    "visitSummary.updateTel": function () {
+      return handleVisitSummaryUpdateTel(user, data);
+    },
     "visitMeds.list": function () {
       return handleVisitMedsList(user, data);
     },
@@ -1024,6 +1027,12 @@ function routeAction(action, data, user) {
     },
     "followup.save": function () {
       return handleFollowupSave(user, data);
+    },
+    "followup.update": function () {
+      return handleFollowupUpdate(user, data);
+    },
+    "followup.delete": function () {
+      return handleFollowupDelete(user, data);
     },
     "users.list": function () {
       return handleUsersList(user, data);
@@ -2917,7 +2926,8 @@ function handleImportConfirm(user, data) {
 // ---------------------------------------------------------------------------
 
 /**
- * visitSummary.list — GET, role-filtered, excludes tel/hn/dob.
+ * visitSummary.list — GET, role-filtered.
+ * Includes tel for contact verification (Module 5 & 6).
  * staff_hsc: own hosp_code only.
  * staff_hosp+: all, optionally filtered by service_date/hosp_code.
  */
@@ -2950,6 +2960,7 @@ function handleVisitSummaryList(user, params) {
     results.push({
       vn: row[VISIT_SUMMARY_COLS.vn],
       patient_name: row[VISIT_SUMMARY_COLS.patient_name] || "",
+      tel: String(row[VISIT_SUMMARY_COLS.tel] || ""),
       clinic_type: row[VISIT_SUMMARY_COLS.clinic_type] || "",
       hosp_code: hospCode,
       hosp_name: hospName,
@@ -3653,6 +3664,63 @@ function handleVisitMedsTrackDelivery(user, data) {
   };
 }
 
+/**
+ * visitSummary.updateTel — POST, update patient phone number.
+ * Access: staff_hsc (own hosp_code only), staff_hosp, admin_hosp, super_admin.
+ */
+function handleVisitSummaryUpdateTel(user, data) {
+  var vn = String(data.vn || "").trim();
+  var tel = String(data.tel || "").trim();
+
+  if (!vn) return { success: false, error: "vn is required" };
+
+  // Only allow authorized roles (check early before expensive sheet scan)
+  if (["staff_hsc", "staff_hosp", "admin_hosp", "super_admin"].indexOf(user.role) === -1) {
+    return { success: false, error: "Forbidden" };
+  }
+
+  // Validate tel format: 9-10 digits starting with 0, or empty (clear)
+  if (tel && !/^0\d{8,9}$/.test(tel)) {
+    return { success: false, error: "รูปแบบเบอร์โทรไม่ถูกต้อง (ต้องเป็นตัวเลข 9-10 หลัก ขึ้นต้นด้วย 0)" };
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var vsSheet = ss.getSheetByName("VISIT_SUMMARY");
+  if (!vsSheet) return { success: false, error: "Sheet not found" };
+
+  var vsData = vsSheet.getDataRange().getValues();
+  var vsIdx = -1;
+
+  for (var v = 1; v < vsData.length; v++) {
+    if (String(vsData[v][VISIT_SUMMARY_COLS.vn]) === vn) {
+      vsIdx = v;
+      break;
+    }
+  }
+
+  if (vsIdx === -1) return { success: false, error: "VN not found" };
+
+  // staff_hsc: verify VN belongs to own hosp_code
+  if (user.role === "staff_hsc") {
+    if (String(vsData[vsIdx][VISIT_SUMMARY_COLS.hosp_code]) !== user.hosp_code) {
+      return { success: false, error: "Access denied: VN not in your facility" };
+    }
+  }
+
+  var oldTel = String(vsData[vsIdx][VISIT_SUMMARY_COLS.tel] || "");
+  vsSheet.getRange(vsIdx + 1, VISIT_SUMMARY_COLS.tel + 1).setValue(tel);
+
+  appendAuditLog(user, "UPDATE_TEL", "VISIT_SUMMARY", vn, null, {
+    old_tel: oldTel,
+    new_tel: tel,
+  });
+
+  return {
+    success: true,
+    data: { message: "อัปเดตเบอร์โทรสำเร็จ", vn: vn, tel: tel },
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Followup Handlers (T101)
 // ---------------------------------------------------------------------------
@@ -3671,6 +3739,8 @@ function handleFollowupList(user, params) {
   var statusFilter = params.status || "";
   var hospCodeFilter = params.hosp_code || "";
   var serviceDateFilter = params.service_date || "";
+  var patientNameFilter = (params.patient_name || "").toLowerCase();
+  var clinicTypeFilter = params.clinic_type || "";
 
   var ss = getSpreadsheet();
   var vsSheet = ss.getSheetByName("VISIT_SUMMARY");
@@ -3678,6 +3748,19 @@ function handleFollowupList(user, params) {
 
   var facilitiesMap = getFacilitiesMap();
   var vsData = vsSheet.getDataRange().getValues();
+
+  // Build user_id -> display name lookup for recorded_by resolution
+  var usersSheet = ss.getSheetByName("USERS");
+  var userNameMap = {};
+  if (usersSheet) {
+    var usersData = usersSheet.getDataRange().getValues();
+    for (var u = 1; u < usersData.length; u++) {
+      var uid = String(usersData[u][USERS_COLS.user_id]);
+      var firstName = String(usersData[u][USERS_COLS.first_name] || "");
+      var lastName = String(usersData[u][USERS_COLS.last_name] || "");
+      userNameMap[uid] = (firstName + " " + lastName).trim();
+    }
+  }
 
   // Build followup records lookup: vn -> array of records
   var fuSheet = ss.getSheetByName("FOLLOWUP");
@@ -3696,10 +3779,17 @@ function handleFollowupList(user, params) {
         drug_adherence: String(fuData[f][FOLLOWUP_COLS.drug_adherence] || ""),
         other_note: String(fuData[f][FOLLOWUP_COLS.other_note] || ""),
         recorded_by: fuData[f][FOLLOWUP_COLS.recorded_by] || "",
+        recorded_by_name: userNameMap[String(fuData[f][FOLLOWUP_COLS.recorded_by])] || "",
         recorded_at: fuData[f][FOLLOWUP_COLS.recorded_at] || "",
       };
       if (!followupByVN[fuVN]) followupByVN[fuVN] = [];
       followupByVN[fuVN].push(record);
+    }
+    // Sort followup records newest first within each VN
+    for (var vn in followupByVN) {
+      followupByVN[vn].sort(function (a, b) {
+        return String(b.followup_date).localeCompare(String(a.followup_date));
+      });
     }
   }
 
@@ -3745,6 +3835,14 @@ function handleFollowupList(user, params) {
     // Hosp code filter
     if (hospCodeFilter && hospCode !== hospCodeFilter) continue;
 
+    // Clinic type filter
+    var clinicType = String(row[VISIT_SUMMARY_COLS.clinic_type] || "");
+    if (clinicTypeFilter && clinicType !== clinicTypeFilter) continue;
+
+    // Patient name filter (case-insensitive substring match)
+    var patientName = String(row[VISIT_SUMMARY_COLS.patient_name] || "");
+    if (patientNameFilter && patientName.toLowerCase().indexOf(patientNameFilter) === -1) continue;
+
     // Compute followup_status
     var fuRecords = followupByVN[vn] || [];
     var followupStatus = fuRecords.length > 0 ? "followed" : "pending";
@@ -3757,6 +3855,7 @@ function handleFollowupList(user, params) {
     results.push({
       vn: vn,
       patient_name: row[VISIT_SUMMARY_COLS.patient_name] || "",
+      dob: toDateStr(row[VISIT_SUMMARY_COLS.dob]),
       tel: row[VISIT_SUMMARY_COLS.tel] || "",
       hn: row[VISIT_SUMMARY_COLS.hn] || "",
       hosp_code: hospCode,
@@ -3813,6 +3912,7 @@ function handleFollowupSave(user, data) {
 
   // Validate VN exists and dispensing_confirmed = Y
   var vsSheet = ss.getSheetByName("VISIT_SUMMARY");
+  if (!vsSheet) return { success: false, error: "VISIT_SUMMARY sheet not found" };
   var vsData = vsSheet.getDataRange().getValues();
   var found = false;
   for (var i = 1; i < vsData.length; i++) {
@@ -3831,6 +3931,7 @@ function handleFollowupSave(user, data) {
 
   // Insert followup record
   var fuSheet = ss.getSheetByName("FOLLOWUP");
+  if (!fuSheet) return { success: false, error: "FOLLOWUP sheet not found" };
   var followupId = Utilities.getUuid();
   var now = new Date().toISOString();
 
@@ -3855,6 +3956,103 @@ function handleFollowupSave(user, data) {
   });
 
   return { success: true, data: { followup_id: followupId } };
+}
+
+/**
+ * followup.update — POST, update an existing followup record.
+ * Access: super_admin, admin_hosp only.
+ */
+function handleFollowupUpdate(user, data) {
+  // Access control
+  if (user.role !== "super_admin" && user.role !== "admin_hosp") {
+    return { success: false, error: "Access denied: admin only" };
+  }
+
+  var followupId = String(data.followup_id || "").trim();
+  if (!followupId) return { success: false, error: "followup_id is required" };
+
+  var followupDate = String(data.followup_date || "").trim();
+  var generalCondition = String(data.general_condition || "").trim();
+  var sideEffect = String(data.side_effect || "").trim();
+  var drugAdherence = String(data.drug_adherence || "").trim();
+  var otherNote = String(data.other_note || "").trim();
+
+  if (!followupDate) return { success: false, error: "followup_date is required" };
+
+  var ss = getSpreadsheet();
+  var fuSheet = ss.getSheetByName("FOLLOWUP");
+  if (!fuSheet) return { success: false, error: "FOLLOWUP sheet not found" };
+
+  var rows = fuSheet.getDataRange().getValues();
+  var foundRow = -1;
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][FOLLOWUP_COLS.followup_id] === followupId) {
+      foundRow = i + 1;
+      break;
+    }
+  }
+  if (foundRow === -1) return { success: false, error: "Followup record not found" };
+
+  // Update row — preserve followup_id, vn, recorded_by, recorded_at
+  var oldRow = rows[foundRow - 1];
+  var updatedRow = [
+    followupId,
+    oldRow[FOLLOWUP_COLS.vn],
+    followupDate,
+    generalCondition,
+    sideEffect,
+    drugAdherence,
+    otherNote,
+    oldRow[FOLLOWUP_COLS.recorded_by],
+    oldRow[FOLLOWUP_COLS.recorded_at],
+  ];
+
+  ensureTextFormat("FOLLOWUP", foundRow);
+  fuSheet.getRange(foundRow, 1, 1, updatedRow.length).setValues([updatedRow]);
+
+  // Audit log
+  appendAuditLog(user, "UPDATE", "FOLLOWUP", followupId, {
+    followup_date: String(oldRow[FOLLOWUP_COLS.followup_date] || ""),
+  }, {
+    followup_date: followupDate,
+  });
+
+  return { success: true, data: { followup_id: followupId } };
+}
+
+/**
+ * followup.delete — POST, delete a followup record (hard delete from sheet).
+ * Access: super_admin, admin_hosp only.
+ */
+function handleFollowupDelete(user, data) {
+  if (user.role !== "super_admin" && user.role !== "admin_hosp") {
+    return { success: false, error: "Access denied: admin only" };
+  }
+
+  var followupId = String(data.followup_id || "").trim();
+  if (!followupId) return { success: false, error: "followup_id is required" };
+
+  var ss = getSpreadsheet();
+  var fuSheet = ss.getSheetByName("FOLLOWUP");
+  if (!fuSheet) return { success: false, error: "FOLLOWUP sheet not found" };
+
+  var rows = fuSheet.getDataRange().getValues();
+  var foundRow = -1;
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][FOLLOWUP_COLS.followup_id] === followupId) {
+      foundRow = i + 1;
+      break;
+    }
+  }
+  if (foundRow === -1) return { success: false, error: "Followup record not found" };
+
+  // Delete the row
+  fuSheet.deleteRow(foundRow);
+
+  // Audit log
+  appendAuditLog(user, "DELETE", "FOLLOWUP", followupId, {}, {});
+
+  return { success: true, data: { success: true } };
 }
 
 // ---------------------------------------------------------------------------

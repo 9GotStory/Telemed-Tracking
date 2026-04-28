@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { visitService } from '@/services/visitService'
 import type { TrackDeliveryPayload } from '@/services/visitService'
 import { visitKeys } from './visitKeys'
+import { followupKeys } from '@/modules/module6/useFollowup'
 import { updateSummaryByVn, rollbackSnapshot } from './optimisticHelpers'
 
 const DELIVERY_LABELS: Record<string, string> = {
@@ -18,6 +19,7 @@ export function useUpdateDeliveryDate() {
     mutationFn: (payload: TrackDeliveryPayload) => visitService.trackDelivery(payload),
     onMutate: async (payload) => {
       await queryClient.cancelQueries({ queryKey: visitKeys.all })
+      await queryClient.cancelQueries({ queryKey: followupKeys.all })
 
       const snapshot = updateSummaryByVn(
         queryClient,
@@ -25,10 +27,31 @@ export function useUpdateDeliveryDate() {
         (item) => ({ ...item, [payload.field]: payload.date }),
       )
 
-      return { snapshot }
+      // Also optimistically update followup queries
+      const fuSnapshot = queryClient.setQueriesData<unknown[]>(
+        { queryKey: followupKeys.all },
+        (oldData) => {
+          if (!Array.isArray(oldData)) return oldData
+          return oldData.map((item) => {
+            const rec = item as Record<string, unknown>
+            if (rec.vn === payload.vn) {
+              return { ...rec, [payload.field]: payload.date }
+            }
+            return item
+          })
+        },
+      )
+      const fuEntries = fuSnapshot.map(([qk, data]) => ({ queryKey: qk, data })).filter((e) => e.data !== undefined)
+
+      return { snapshot, fuSnapshot: fuEntries }
     },
     onError: (err, _variables, context) => {
       if (context?.snapshot) rollbackSnapshot(queryClient, context.snapshot)
+      if (context?.fuSnapshot) {
+        for (const { queryKey, data } of context.fuSnapshot) {
+          if (data !== undefined) queryClient.setQueryData(queryKey, data)
+        }
+      }
       toast.error('อัปเดตสถานะการจัดส่งไม่สำเร็จ', { description: err.message })
     },
     onSuccess: (_data, variables) => {
@@ -37,6 +60,7 @@ export function useUpdateDeliveryDate() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: visitKeys.all })
+      queryClient.invalidateQueries({ queryKey: followupKeys.all })
     },
   })
 }

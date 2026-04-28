@@ -5,10 +5,11 @@ import { gasGet, gasPost } from '@/services/api'
 // Zod Schemas (T086)
 // ---------------------------------------------------------------------------
 
-/** VisitSummary row from GAS — excludes tel, hn, dob (Module 5 safe view) */
+/** VisitSummary row from GAS — includes tel for contact verification (Module 5+6) */
 const visitSummaryItemSchema = z.object({
   vn: z.string(),
   patient_name: z.string(),
+  tel: z.string().default(''),
   clinic_type: z.string(),
   hosp_code: z.string(),
   hosp_name: z.string(),
@@ -90,6 +91,11 @@ export interface BatchConfirmPayload {
 
 export type DeliveryField = 'drug_sent_date' | 'drug_received_date' | 'drug_delivered_date'
 
+export interface UpdateTelPayload {
+  vn: string
+  tel: string
+}
+
 export interface TrackDeliveryPayload {
   vn: string
   field: DeliveryField
@@ -107,7 +113,7 @@ export interface VisitMedsSavePayload {
 // ---------------------------------------------------------------------------
 
 export const visitService = {
-  /** List visit summaries — excludes tel/hn/dob, role-filtered by GAS */
+  /** List visit summaries — includes tel for contact verification, role-filtered by GAS */
   async listSummary(filters: VisitSummaryFilters = {}): Promise<VisitSummaryItem[]> {
     const params: Record<string, string> = {}
     if (filters.service_date) params.service_date = filters.service_date
@@ -132,6 +138,12 @@ export const visitService = {
   async batchConfirm(payload: BatchConfirmPayload): Promise<{ message: string; updated: number }> {
     const raw = await gasPost<unknown>('visitMeds.batchConfirm', payload)
     return z.object({ message: z.string(), updated: z.number() }).parse(raw)
+  },
+
+  /** Update patient phone number */
+  async updateTel(payload: UpdateTelPayload): Promise<{ message: string; vn: string; tel: string }> {
+    const raw = await gasPost<unknown>('visitSummary.updateTel', payload)
+    return z.object({ message: z.string(), vn: z.string(), tel: z.string() }).parse(raw)
   },
 
   /** Track drug delivery — update delivery date fields */

@@ -15,11 +15,27 @@ interface AuthState {
 const TOKEN_KEY = 'session_token'
 const USER_KEY = 'session_user'
 
+/** Read sessionStorage synchronously at store creation time */
+function getInitialAuth(): { token: string | null; user: AuthUser | null; isAuthenticated: boolean; forceChange: boolean } {
+  const token = sessionStorage.getItem(TOKEN_KEY)
+  const userJson = sessionStorage.getItem(USER_KEY)
+  const forceChange = sessionStorage.getItem('force_change') === '1'
+
+  if (token && userJson) {
+    try {
+      const user = JSON.parse(userJson) as AuthUser
+      return { token, user, isAuthenticated: true, forceChange }
+    } catch {
+      sessionStorage.removeItem(TOKEN_KEY)
+      sessionStorage.removeItem(USER_KEY)
+      sessionStorage.removeItem('force_change')
+    }
+  }
+  return { token: null, user: null, isAuthenticated: false, forceChange: false }
+}
+
 export const useAuthStore = create<AuthState>()((set) => ({
-  token: null,
-  user: null,
-  isAuthenticated: false,
-  forceChange: false,
+  ...getInitialAuth(),
 
   setAuth: (token: string, user: AuthUser, forceChange = false) => {
     sessionStorage.setItem(TOKEN_KEY, token)
@@ -36,19 +52,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
   },
 
   hydrate: () => {
-    const token = sessionStorage.getItem(TOKEN_KEY)
-    const userJson = sessionStorage.getItem(USER_KEY)
-    const forceChange = sessionStorage.getItem('force_change') === '1'
-    if (token && userJson) {
-      try {
-        const user = JSON.parse(userJson) as AuthUser
-        set({ token, user, isAuthenticated: true, forceChange })
-      } catch {
-        // Corrupted data — clear and start fresh
-        sessionStorage.removeItem(TOKEN_KEY)
-        sessionStorage.removeItem(USER_KEY)
-        sessionStorage.removeItem('force_change')
-      }
-    }
+    // Kept as no-op for backward compatibility — hydration now happens
+    // synchronously at store creation via getInitialAuth()
   },
 }))

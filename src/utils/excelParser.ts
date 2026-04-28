@@ -2,6 +2,8 @@
 const VN_REGEX = /^\d{12}$/
 /** HN format: 6 digits */
 const HN_REGEX = /^\d{6}$/
+/** Excel serial date cutoff — numbers above this are likely serial dates, not years */
+const SERIAL_DATE_THRESHOLD = 10000
 
 /** Expected column headers in HosXP Excel export */
 const REQUIRED_COLUMNS = ['vn', 'hn', 'patient_name', 'dob', 'tel', 'drug_name', 'strength', 'qty', 'unit', 'sig'] as const
@@ -123,7 +125,10 @@ export async function parseHosXPExport(arrayBuffer: ArrayBuffer): Promise<ParseR
     if (rowErrors.length > 0) {
       invalidRows[i] = rowErrors
     }
-    rows.push(mapped)
+    // Only include valid rows in the output
+    if (rowErrors.length === 0) {
+      rows.push(mapped)
+    }
   }
 
   // Group by VN
@@ -157,6 +162,23 @@ function buildHeaderMapping(headers: string[]): Record<string, string> {
   return mapping
 }
 
+/**
+ * Convert a possible Excel serial date number to YYYY-MM-DD string.
+ * SheetJS without cellDates returns date cells as numeric serials (e.g. 44196).
+ */
+function serialToDateStr(val: unknown): string {
+  if (typeof val === 'number' && val > SERIAL_DATE_THRESHOLD) {
+    // Excel serial date: days since 1899-12-30
+    const epoch = new Date(1899, 11, 30)
+    epoch.setDate(epoch.getDate() + val)
+    const y = epoch.getFullYear()
+    const m = String(epoch.getMonth() + 1).padStart(2, '0')
+    const d = String(epoch.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+  }
+  return String(val ?? '').trim()
+}
+
 function mapRow(raw: Record<string, unknown>, headerMapping: Record<string, string>): ParsedRow | null {
   const mapped: Record<string, unknown> = {}
   for (const [header, field] of Object.entries(headerMapping)) {
@@ -173,7 +195,7 @@ function mapRow(raw: Record<string, unknown>, headerMapping: Record<string, stri
     vn,
     hn: String(mapped.hn ?? '').trim(),
     patient_name: String(mapped.patient_name ?? '').trim(),
-    dob: String(mapped.dob ?? '').trim(),
+    dob: serialToDateStr(mapped.dob),
     tel: String(mapped.tel ?? '').trim(),
     drug_name: String(mapped.drug_name ?? '').trim(),
     strength: String(mapped.strength ?? '').trim(),

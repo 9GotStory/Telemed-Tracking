@@ -7,7 +7,7 @@ import type { LoginFormValues, RegisterFormValues } from '@/services/authService
 import type { AuthUser } from '@/types/user'
 
 /** Redirect path based on user role after login */
-function getRoleHomePath(role: string): string {
+export function getRoleHomePath(role: string): string {
   switch (role) {
     case 'super_admin':
     case 'admin_hosp':
