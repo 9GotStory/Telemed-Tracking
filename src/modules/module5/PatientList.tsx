@@ -8,6 +8,7 @@ import { DrugTrackingStatus } from './DrugTrackingStatus'
 import { useVisitMedsList, useBatchConfirm } from './useDrugConfirm'
 import { useAuthStore } from '@/stores/authStore'
 import type { VisitSummaryItem } from '@/services/visitService'
+import { parseClinicTypes, CLINIC_TYPES } from '@/constants/clinicTypes'
 import { ChevronDown, ChevronUp, CheckCircle2, XCircle, X } from 'lucide-react'
 
 interface PatientListProps {
@@ -221,7 +222,10 @@ function PatientCard({
         >
           <div className="flex items-center gap-3">
             <span className="font-medium text-sm">{patient.patient_name}</span>
-            <StatusBadge variant="info">{patient.clinic_type}</StatusBadge>
+            {parseClinicTypes(patient.clinic_type).map((ct) => {
+              const label = CLINIC_TYPES.find((c) => c.value === ct)?.label ?? ct
+              return <StatusBadge key={ct} variant="info">{label}</StatusBadge>
+            })}
             <StatusBadge variant={confirmStatus.variant}>{confirmStatus.label}</StatusBadge>
             {patient.has_drug_change === 'Y' && (
               <StatusBadge variant="pending">มีการเปลี่ยนแปลงยา</StatusBadge>

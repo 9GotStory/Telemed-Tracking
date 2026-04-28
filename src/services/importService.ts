@@ -73,6 +73,7 @@ export type ImportPreviewResponse = z.infer<typeof importPreviewResponseSchema>
 
 const importConfirmResponseSchema = z.object({
   imported_visits: z.number(),
+  updated_pre_registered: z.number().optional(),
   imported_meds: z.number(),
   import_round1_at: z.string().nullable().optional(),
 })

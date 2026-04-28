@@ -564,6 +564,21 @@ function toDateStr(val) {
   return String(val);
 }
 
+/**
+ * Split comma-separated clinic_type into array of individual types.
+ */
+function splitClinicTypes(clinicTypeStr) {
+  if (!clinicTypeStr) return [];
+  return String(clinicTypeStr).split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+}
+
+/**
+ * Check if a VN is a placeholder (pre-registered, not yet from HosXP).
+ */
+function isPlaceholderVN(vn) {
+  return String(vn).indexOf("REG-") === 0;
+}
+
 function ensureTextFormat(sheetName, startRow, numRows) {
   if (!numRows) numRows = 1;
 
@@ -1001,6 +1016,9 @@ function routeAction(action, data, user) {
     "import.preview": function () {
       return handleImportPreview(user, data);
     },
+    "appointment.register": function () {
+      return handleAppointmentRegister(user, data);
+    },
     "import.confirm": function () {
       return handleImportConfirm(user, data);
     },
@@ -1234,14 +1252,18 @@ function handleDashboardStats() {
   }
 
   // Count attended from VISIT_SUMMARY (reuse vsData)
+  // Split comma-separated clinic_type so each type is counted separately
   for (var va = 1; va < vsData.length; va++) {
-    var vsClinic = String(vsData[va][VISIT_SUMMARY_COLS.clinic_type]);
+    var vsClinics = splitClinicTypes(String(vsData[va][VISIT_SUMMARY_COLS.clinic_type]));
     var vsHosp = String(vsData[va][VISIT_SUMMARY_COLS.hosp_code]);
     var vsAttended = String(vsData[va][VISIT_SUMMARY_COLS.attended]);
 
-    if (!clinicMap[vsClinic])
-      clinicMap[vsClinic] = { appointed: 0, attended: 0 };
-    if (vsAttended === "Y") clinicMap[vsClinic].attended++;
+    for (var vci = 0; vci < vsClinics.length; vci++) {
+      var singleClinic = vsClinics[vci];
+      if (!clinicMap[singleClinic])
+        clinicMap[singleClinic] = { appointed: 0, attended: 0 };
+      if (vsAttended === "Y") clinicMap[singleClinic].attended++;
+    }
 
     if (!facilityAttMap[vsHosp])
       facilityAttMap[vsHosp] = { appointed: 0, attended: 0 };
@@ -2101,6 +2123,7 @@ function handleScheduleList(user, params) {
   var facilitiesMap = getFacilitiesMap();
 
   // Build actual_count lookup from VISIT_SUMMARY (attended = Y)
+  // Split comma-separated clinic_type so each type is counted separately
   var actualCountMap = {};
   var vsSheet = ss.getSheetByName("VISIT_SUMMARY");
   if (vsSheet) {
@@ -2109,9 +2132,11 @@ function handleScheduleList(user, params) {
       if (vsData[v][VISIT_SUMMARY_COLS.attended] === "Y") {
         var vsDate = toDateStr(vsData[v][VISIT_SUMMARY_COLS.service_date]);
         var vsHosp = String(vsData[v][VISIT_SUMMARY_COLS.hosp_code]);
-        var vsClinic = String(vsData[v][VISIT_SUMMARY_COLS.clinic_type]);
-        var countKey = vsDate + "|" + vsHosp + "|" + vsClinic;
-        actualCountMap[countKey] = (actualCountMap[countKey] || 0) + 1;
+        var vsClinics = splitClinicTypes(String(vsData[v][VISIT_SUMMARY_COLS.clinic_type]));
+        for (var ci = 0; ci < vsClinics.length; ci++) {
+          var countKey = vsDate + "|" + vsHosp + "|" + vsClinics[ci];
+          actualCountMap[countKey] = (actualCountMap[countKey] || 0) + 1;
+        }
       }
     }
   }
@@ -2603,6 +2628,169 @@ function handleReadinessSave(user, data) {
  * Round 1: VN must NOT exist in VISIT_SUMMARY.
  * Round 2: VN must exist from round 1.
  */
+
+/**
+ * appointment.register — Phase 1: pre-register patients before HosXP import.
+ * Access: super_admin, admin_hosp, staff_hosp.
+ * Input: { hosp_code, service_date, appointments: [{ hn, patient_name, clinic_types: string[] }] }
+ */
+function handleAppointmentRegister(user, data) {
+  // Access control
+  if (user.role !== "super_admin" && user.role !== "admin_hosp" && user.role !== "staff_hosp" && user.role !== "staff_hsc") {
+    return { success: false, error: "Access denied" };
+  }
+
+  var hospCode = String(data.hosp_code || "").trim();
+  var serviceDate = String(data.service_date || "").trim();
+  var appointments = data.appointments;
+
+  if (!hospCode) return { success: false, error: "hosp_code is required" };
+  if (!serviceDate) return { success: false, error: "service_date is required" };
+  if (!appointments || !appointments.length) {
+    return { success: false, error: "appointments is required" };
+  }
+
+  // staff_hsc can only register for own facility
+  if (user.role === "staff_hsc" && hospCode !== user.hosp_code) {
+    return { success: false, error: "Access denied: cannot register for other facility" };
+  }
+
+  var ss = getSpreadsheet();
+  var vsSheet = ss.getSheetByName("VISIT_SUMMARY");
+  var now = new Date().toISOString();
+
+  // Build existing HN+date+hosp_code set to check duplicates
+  var vsData = vsSheet.getDataRange().getValues();
+  var existingKeys = {};
+  for (var e = 1; e < vsData.length; e++) {
+    var eHN = String(vsData[e][VISIT_SUMMARY_COLS.hn]).trim();
+    var eDate = toDateStr(vsData[e][VISIT_SUMMARY_COLS.service_date]);
+    var eHosp = String(vsData[e][VISIT_SUMMARY_COLS.hosp_code]).trim();
+    if (eHN && eDate && eHosp) {
+      existingKeys[eHN + "|" + eDate + "|" + eHosp] = true;
+    }
+  }
+
+  var validClinicTypes = [
+    "PCU-DM", "PCU-HT", "ANC-nutrition", "ANC-parent",
+    "postpartum-EPI", "postpartum-dev",
+  ];
+
+  var registered = 0;
+  var duplicates = [];
+  var errors = [];
+
+  for (var i = 0; i < appointments.length; i++) {
+    var apt = appointments[i];
+    var hn = String(apt.hn || "").trim();
+    var patientName = String(apt.patient_name || "").trim();
+    var clinicTypes = apt.clinic_types || [];
+
+    // Validate HN: 6-digit number
+    if (!/^\d{6}$/.test(hn)) {
+      errors.push({ hn: hn, error: "HN must be 6 digits" });
+      continue;
+    }
+    if (!patientName) {
+      errors.push({ hn: hn, error: "patient_name is required" });
+      continue;
+    }
+    if (!clinicTypes.length) {
+      errors.push({ hn: hn, error: "clinic_types must not be empty" });
+      continue;
+    }
+
+    // Validate each clinic_type
+    var validCTs = [];
+    for (var ct = 0; ct < clinicTypes.length; ct++) {
+      if (validClinicTypes.indexOf(clinicTypes[ct]) !== -1) {
+        validCTs.push(clinicTypes[ct]);
+      }
+    }
+    if (!validCTs.length) {
+      errors.push({ hn: hn, error: "No valid clinic_types" });
+      continue;
+    }
+
+    // Check duplicate HN + date + hosp_code
+    var dupKey = hn + "|" + serviceDate + "|" + hospCode;
+    if (existingKeys[dupKey]) {
+      duplicates.push(hn);
+      continue;
+    }
+
+    // Generate placeholder VN
+    var placeholderVN = generatePlaceholderVN();
+
+    // Join clinic types as comma-separated
+    var clinicTypeStr = validCTs.join(",");
+
+    // Insert VISIT_SUMMARY row
+    var newRow = vsSheet.getLastRow() + 1;
+    ensureTextFormat("VISIT_SUMMARY", newRow);
+    vsSheet.getRange(newRow, 1, 1, 20).setValues([[
+      placeholderVN,    // vn
+      hn,               // hn
+      patientName,      // patient_name
+      "",               // dob (unknown until HosXP import)
+      "",               // tel (unknown until HosXP import)
+      clinicTypeStr,    // clinic_type (comma-separated)
+      hospCode,         // hosp_code
+      serviceDate,      // service_date
+      "",               // attended
+      "N",              // has_drug_change
+      "N",              // drug_source_pending
+      "N",              // dispensing_confirmed
+      "",               // import_round1_at (empty = pre-registered)
+      "",               // import_round2_at
+      "pending",        // diff_status
+      "",               // confirmed_by
+      "",               // confirmed_at
+      "",               // drug_sent_date
+      "",               // drug_received_date
+      "",               // drug_delivered_date
+    ]]);
+
+    // Mark this key as existing to prevent dup within same payload
+    existingKeys[dupKey] = true;
+    registered++;
+  }
+
+  // Audit log
+  if (registered > 0) {
+    appendAuditLog(user, "APPOINTMENT_REGISTER", "VISIT_SUMMARY", "", null, {
+      hosp_code: hospCode,
+      service_date: serviceDate,
+      registered: registered,
+      duplicates: duplicates.length,
+    });
+  }
+
+  return {
+    success: true,
+    data: {
+      registered: registered,
+      duplicates: duplicates,
+      errors: errors,
+    },
+  };
+}
+
+/**
+ * Generate a placeholder VN: REG-YYYYMMDD-HHmmss-XXXX
+ */
+function generatePlaceholderVN() {
+  var now = new Date();
+  var y = now.getFullYear();
+  var mo = ("0" + (now.getMonth() + 1)).slice(-2);
+  var d = ("0" + now.getDate()).slice(-2);
+  var h = ("0" + now.getHours()).slice(-2);
+  var mi = ("0" + now.getMinutes()).slice(-2);
+  var s = ("0" + now.getSeconds()).slice(-2);
+  var rand = ("0000" + Math.random().toString(36).slice(2, 6).toUpperCase());
+  return "REG-" + y + mo + d + "-" + h + mi + s + "-" + rand.slice(-4);
+}
+
 function handleImportPreview(user, data) {
   // Access control
   if (
@@ -2745,23 +2933,37 @@ function handleImportConfirm(user, data) {
   var now = new Date().toISOString();
 
   var importedVisits = 0;
+  var updatedPreRegistered = 0;
   var importedMeds = 0;
   var processedVNs = {}; // T162: dedup guard for duplicate VN in payload
 
-  // T166: Pre-read sheets and build lookup maps for round 2
+  // Pre-read VISIT_SUMMARY for both round 2 and Phase 2 HN matching
   var vsRows = null;
   var vnToVsRow = {}; // VN → index in vsRows (O(1) lookup)
   var vnToRound1Meds = {}; // VN → sorted array of {drug_name, strength, qty}
+  var hnToPlaceholderRow = {}; // "hn|date|hosp" → vsRow index for Phase 2 matching
+
+  // Always read VISIT_SUMMARY for Phase 2 HN matching (round 1) and round 2 diff
+  vsRows = vsSheet.getDataRange().getValues();
+
+  // Build VN → row index map
+  for (var v = 1; v < vsRows.length; v++) {
+    var vvn = String(vsRows[v][VISIT_SUMMARY_COLS.vn]);
+    if (vvn) vnToVsRow[vvn] = v;
+
+    // Build HN → placeholder row map for Phase 2 matching (round 1 only)
+    if (round === 1 && isPlaceholderVN(vvn)) {
+      var phHN = String(vsRows[v][VISIT_SUMMARY_COLS.hn]).trim();
+      var phDate = toDateStr(vsRows[v][VISIT_SUMMARY_COLS.service_date]);
+      var phHosp = String(vsRows[v][VISIT_SUMMARY_COLS.hosp_code]).trim();
+      if (phHN && phDate && phHosp) {
+        hnToPlaceholderRow[phHN + "|" + phDate + "|" + phHosp] = v;
+      }
+    }
+  }
 
   if (round === 2) {
-    vsRows = vsSheet.getDataRange().getValues();
     var vmRows = vmSheet.getDataRange().getValues();
-
-    // Build VN → row index map for VISIT_SUMMARY
-    for (var v = 1; v < vsRows.length; v++) {
-      var vvn = String(vsRows[v][VISIT_SUMMARY_COLS.vn]);
-      if (vvn) vnToVsRow[vvn] = v;
-    }
 
     // Build VN → round 1 meds map (pre-collect and pre-sort)
     for (var m = 1; m < vmRows.length; m++) {
@@ -2795,28 +2997,57 @@ function handleImportConfirm(user, data) {
     processedVNs[vn] = true;
 
     if (round === 1) {
-      // Insert VISIT_SUMMARY with defaults
-      var vsNewRow = vsSheet.getLastRow() + 1;
-      ensureTextFormat("VISIT_SUMMARY", vsNewRow);
-      vsSheet.getRange(vsNewRow, 1, 1, 17).setValues([[
-        String(vn), // vn
-        String(visit.hn || ""), // hn
-        String(visit.patient_name || ""), // patient_name
-        String(visit.dob || ""), // dob
-        String(visit.tel || ""), // tel
-        String(visit.clinic_type || data.clinic_type || ""), // clinic_type
-        String(hospCode), // hosp_code
-        serviceDate, // service_date
-        "", // attended
-        "N", // has_drug_change
-        "N", // drug_source_pending
-        "N", // dispensing_confirmed
-        now, // import_round1_at
-        "", // import_round2_at
-        "pending", // diff_status
-        "", // confirmed_by
-        "", // confirmed_at
-      ]]);
+      // Phase 2: Check if a pre-registered row (placeholder VN) matches by HN + date + hosp
+      var visitHN = String(visit.hn || "").trim();
+      var phMatchKey = visitHN + "|" + serviceDate + "|" + hospCode;
+      var phRowIdx = hnToPlaceholderRow[phMatchKey];
+
+      if (phRowIdx !== undefined) {
+        // Update existing placeholder row with real VN and data
+        vsRows[phRowIdx][VISIT_SUMMARY_COLS.vn] = String(vn);
+        vsRows[phRowIdx][VISIT_SUMMARY_COLS.patient_name] = String(visit.patient_name || vsRows[phRowIdx][VISIT_SUMMARY_COLS.patient_name]);
+        if (visit.dob) vsRows[phRowIdx][VISIT_SUMMARY_COLS.dob] = String(visit.dob);
+        if (visit.tel) vsRows[phRowIdx][VISIT_SUMMARY_COLS.tel] = String(visit.tel);
+        // Merge clinic_type: keep existing + add from import if not already present
+        var existingClinics = splitClinicTypes(String(vsRows[phRowIdx][VISIT_SUMMARY_COLS.clinic_type] || ""));
+        var importClinic = String(visit.clinic_type || data.clinic_type || "");
+        if (importClinic && existingClinics.indexOf(importClinic) === -1) {
+          existingClinics.push(importClinic);
+        }
+        vsRows[phRowIdx][VISIT_SUMMARY_COLS.clinic_type] = existingClinics.join(",");
+        vsRows[phRowIdx][VISIT_SUMMARY_COLS.import_round1_at] = now;
+        // Write updated row directly to sheet (avoids row-count mismatch from new inserts)
+        vsSheet.getRange(phRowIdx + 1, 1, 1, vsRows[phRowIdx].length).setValues([vsRows[phRowIdx]]);
+        // Remove old placeholder key so it won't match again
+        delete hnToPlaceholderRow[phMatchKey];
+        updatedPreRegistered++;
+      } else {
+        // No pre-registered match: insert new VISIT_SUMMARY row
+        var vsNewRow = vsSheet.getLastRow() + 1;
+        ensureTextFormat("VISIT_SUMMARY", vsNewRow);
+        vsSheet.getRange(vsNewRow, 1, 1, 20).setValues([[
+          String(vn), // vn
+          String(visit.hn || ""), // hn
+          String(visit.patient_name || ""), // patient_name
+          String(visit.dob || ""), // dob
+          String(visit.tel || ""), // tel
+          String(visit.clinic_type || data.clinic_type || ""), // clinic_type
+          String(hospCode), // hosp_code
+          serviceDate, // service_date
+          "", // attended
+          "N", // has_drug_change
+          "N", // drug_source_pending
+          "N", // dispensing_confirmed
+          now, // import_round1_at
+          "", // import_round2_at
+          "pending", // diff_status
+          "", // confirmed_by
+          "", // confirmed_at
+          "", // drug_sent_date
+          "", // drug_received_date
+          "", // drug_delivered_date
+        ]]);
+      }
       importedVisits++;
     } else {
       // Round 2: Update VISIT_SUMMARY using lookup maps (T166) + in-memory batch (T167)
@@ -2897,7 +3128,8 @@ function handleImportConfirm(user, data) {
     }
   }
 
-  // T167: Batch write back VISIT_SUMMARY for round 2 (single API call)
+  // T167: Batch write back VISIT_SUMMARY for round 2 only
+  // Round 1 placeholder updates are written per-row above (avoids row-count mismatch from new inserts)
   if (round === 2 && vsRows) {
     vsSheet.getDataRange().setValues(vsRows);
   }
@@ -2908,6 +3140,7 @@ function handleImportConfirm(user, data) {
     hosp_code: hospCode,
     service_date: serviceDate,
     imported_visits: importedVisits,
+    updated_pre_registered: updatedPreRegistered,
     imported_meds: importedMeds,
   });
 
@@ -2915,6 +3148,7 @@ function handleImportConfirm(user, data) {
     success: true,
     data: {
       imported_visits: importedVisits,
+      updated_pre_registered: updatedPreRegistered,
       imported_meds: importedMeds,
       import_round1_at: round === 1 ? now : null,
     },
@@ -3835,9 +4069,12 @@ function handleFollowupList(user, params) {
     // Hosp code filter
     if (hospCodeFilter && hospCode !== hospCodeFilter) continue;
 
-    // Clinic type filter
+    // Clinic type filter (contains-match for comma-separated values)
     var clinicType = String(row[VISIT_SUMMARY_COLS.clinic_type] || "");
-    if (clinicTypeFilter && clinicType !== clinicTypeFilter) continue;
+    if (clinicTypeFilter) {
+      var clinicArr = splitClinicTypes(clinicType);
+      if (clinicArr.indexOf(clinicTypeFilter) === -1) continue;
+    }
 
     // Patient name filter (case-insensitive substring match)
     var patientName = String(row[VISIT_SUMMARY_COLS.patient_name] || "");

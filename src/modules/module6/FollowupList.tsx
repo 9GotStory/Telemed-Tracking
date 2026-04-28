@@ -10,7 +10,7 @@ import { FollowupForm } from './FollowupForm'
 import { useFollowupList, useFollowupDelete } from './useFollowup'
 import type { FollowupFilters, FollowupItem, FollowupRecord } from '@/services/followupService'
 import { ChevronDown, ChevronUp, Pencil, Trash2, PhoneCall } from 'lucide-react'
-import { CLINIC_TYPES } from '@/constants/clinicTypes'
+import { CLINIC_TYPES, parseClinicTypes } from '@/constants/clinicTypes'
 import { formatBuddhist } from '@/utils/dateUtils'
 
 interface FollowupListProps {
@@ -122,7 +122,10 @@ function FollowupCard({
           className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
         >
           <span className="font-medium text-sm">{item.patient_name}</span>
-          <StatusBadge variant="info">{CLINIC_TYPES.find(c => c.value === item.clinic_type)?.label ?? item.clinic_type}</StatusBadge>
+          {parseClinicTypes(item.clinic_type).map((ct) => {
+            const label = CLINIC_TYPES.find((c) => c.value === ct)?.label ?? ct
+            return <StatusBadge key={ct} variant="info">{label}</StatusBadge>
+          })}
           <StatusBadge variant={cfg.variant}>{cfg.label}</StatusBadge>
           {item.has_drug_change === 'Y' && (
             <StatusBadge variant="pending">เปลี่ยนยา</StatusBadge>

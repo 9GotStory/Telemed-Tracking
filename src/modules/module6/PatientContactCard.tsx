@@ -6,7 +6,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import type { FollowupItem, FollowupMed } from '@/services/followupService'
 import type { DeliveryField } from '@/services/visitService'
 import { AlertTriangle, CheckCircle2 } from 'lucide-react'
-import { CLINIC_TYPES } from '@/constants/clinicTypes'
+import { CLINIC_TYPES, parseClinicTypes } from '@/constants/clinicTypes'
 import { formatBuddhist, formatDateThai } from '@/utils/dateUtils'
 import { format, parseISO, isValid, differenceInYears } from 'date-fns'
 import { LoadingOverlay } from '@/components/common/LoadingOverlay'
@@ -82,11 +82,6 @@ interface PatientContactCardProps {
   item: FollowupItem
 }
 
-function getClinicLabel(clinicType: string): string {
-  const found = CLINIC_TYPES.find((ct) => ct.value === clinicType)
-  return found ? found.label : clinicType
-}
-
 export function PatientContactCard({ item }: PatientContactCardProps) {
   const updateDelivery = useUpdateDeliveryDate()
   const { user } = useAuthStore()
@@ -136,7 +131,12 @@ export function PatientContactCard({ item }: PatientContactCardProps) {
         </div>
         <div>
           <span className="text-muted-foreground">คลินิก</span>
-          <div><StatusBadge variant="info">{getClinicLabel(item.clinic_type)}</StatusBadge></div>
+          <div className="flex flex-wrap gap-1">
+            {parseClinicTypes(item.clinic_type).map((ct) => {
+              const label = CLINIC_TYPES.find((c) => c.value === ct)?.label ?? ct
+              return <StatusBadge key={ct} variant="info">{label}</StatusBadge>
+            })}
+          </div>
         </div>
       </div>
 
