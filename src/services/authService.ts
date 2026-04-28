@@ -6,16 +6,33 @@ import type { LoginResponse, RegisterResponse } from '@/types/api'
 // Zod Schemas (T041)
 // ---------------------------------------------------------------------------
 
+/** Reserved usernames that cannot be used */
+const RESERVED_USERNAMES = new Set([
+  'admin', 'root', 'system', 'moderator', 'superadmin',
+  'administrator', 'support', 'help', 'test', 'guest',
+  'null', 'undefined', 'delete', 'remove', 'reset',
+])
+
 export const loginSchema = z.object({
-  hosp_code: z
+  username: z
     .string()
-    .regex(/^\d{5}$/, 'รหัสสถานพยาบาลต้องเป็นตัวเลข 5 หลัก'),
+    .min(1, 'กรุณากรอกชื่อผู้ใช้'),
   password: z
     .string()
     .min(1, 'กรุณากรอกรหัสผ่าน'),
 })
 
+export const usernameSchema = z
+  .string()
+  .min(4, 'ชื่อผู้ใช้ต้องมีอย่างน้อย 4 ตัวอักษร')
+  .max(20, 'ชื่อผู้ใช้ต้องไม่เกิน 20 ตัวอักษร')
+  .regex(/^[a-z0-9_]+$/, 'ชื่อผู้ใช้ใช้ได้เฉพาะ a-z, 0-9 และ _')
+  .refine((val) => !RESERVED_USERNAMES.has(val), {
+    message: 'ชื่อผู้ใช้นี้ไม่อนุญาตให้ใช้งาน',
+  })
+
 export const registerSchema = z.object({
+  username: usernameSchema,
   hosp_code: z
     .string()
     .regex(/^\d{5}$/, 'รหัสสถานพยาบาลต้องเป็นตัวเลข 5 หลัก'),
@@ -34,6 +51,9 @@ export const registerSchema = z.object({
 })
 
 export const passwordChangeSchema = z.object({
+  current_password: z
+    .string()
+    .min(1, 'กรุณากรอกรหัสผ่านปัจจุบัน'),
   new_password: z
     .string()
     .min(8, 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร'),
@@ -56,6 +76,7 @@ export type PasswordChangeValues = z.infer<typeof passwordChangeSchema>
 const loginResponseSchema = z.object({
   token: z.string(),
   user_id: z.string(),
+  username: z.string(),
   hosp_code: z.string(),
   first_name: z.string(),
   last_name: z.string(),
@@ -96,7 +117,7 @@ export const authService = {
   },
 
   /** Change own password — POST */
-  async changePassword(data: { new_password: string }): Promise<{ message: string }> {
+  async changePassword(data: { current_password: string; new_password: string }): Promise<{ message: string }> {
     const raw = await gasPost<unknown>('auth.changePassword', data)
     return messageResponseSchema.parse(raw)
   },

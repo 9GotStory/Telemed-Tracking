@@ -7,6 +7,7 @@ import { gasGet, gasPost } from '@/services/api'
 
 const userItemSchema = z.object({
   user_id: z.string(),
+  username: z.string(),
   hosp_code: z.string(),
   hosp_name: z.string().optional().default(''),
   first_name: z.string(),

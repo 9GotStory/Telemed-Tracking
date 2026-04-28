@@ -11,6 +11,7 @@ export interface GasResponse<T> {
 export interface LoginResponse {
   token: string
   user_id: string
+  username: string
   hosp_code: string
   first_name: string
   last_name: string

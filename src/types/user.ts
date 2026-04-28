@@ -3,6 +3,7 @@ export type UserStatus = 'pending' | 'active' | 'inactive'
 
 export interface User {
   user_id: string
+  username: string
   hosp_code: string
   first_name: string
   last_name: string
@@ -17,6 +18,7 @@ export interface User {
 /** Auth user stored in authStore — excludes sensitive fields */
 export interface AuthUser {
   user_id: string
+  username: string
   hosp_code: string
   first_name: string
   last_name: string

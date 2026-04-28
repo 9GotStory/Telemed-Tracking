@@ -61,7 +61,8 @@ export function UserTable({ users, onApprove }: UserTableProps) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b text-left text-muted-foreground">
-              <th className="pb-2 pr-3 font-medium">รหัส</th>
+              <th className="pb-2 pr-3 font-medium">ชื่อผู้ใช้</th>
+              <th className="pb-2 pr-3 font-medium">สถานพยาบาล</th>
               <th className="pb-2 pr-3 font-medium">ชื่อ-สกุล</th>
               <th className="pb-2 pr-3 font-medium">เบอร์โทร</th>
               <th className="pb-2 pr-3 font-medium">บทบาท</th>
@@ -75,6 +76,9 @@ export function UserTable({ users, onApprove }: UserTableProps) {
               const statusVariant = STATUS_VARIANT[user.status] ?? 'pending'
               return (
                 <tr key={user.user_id} className="border-b hover:bg-btn-default-light/30">
+                  <td className="py-2.5 pr-3">
+                    <span className="font-mono text-sm font-medium">{user.username}</span>
+                  </td>
                   <td className="py-2.5 pr-3 text-xs">
                     <span className="font-medium">{user.hosp_name || user.hosp_code}</span>
                     <span className="text-muted-foreground ml-1">({user.hosp_code})</span>

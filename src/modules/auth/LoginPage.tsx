@@ -1,4 +1,4 @@
-import { useForm, Controller } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Navigate, Link } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,24 +10,21 @@ import { useLogin } from '@/hooks/useAuth'
 import { getRoleHomePath } from '@/hooks/useAuth'
 import { loginSchema, type LoginFormValues } from '@/services/authService'
 import { useDebugMount } from '@/hooks/useDebugLog'
-import { HospCodeSelect } from '@/components/common/HospCodeSelect'
-import { useHospitalsList } from '@/hooks/useHospitals'
+import { User } from 'lucide-react'
 
 export default function LoginPage() {
   useDebugMount('LoginPage')
   const { user } = useAuthStore()
   const loginMutation = useLogin()
-  const { data: hospitals = [] } = useHospitalsList()
 
   const {
     register,
     handleSubmit,
-    control,
     formState: { errors },
     setError,
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { hosp_code: '', password: '' },
+    defaultValues: { username: '', password: '' },
   })
 
   const onSubmit = (data: LoginFormValues) => {
@@ -57,22 +54,23 @@ export default function LoginPage() {
           )}
 
           <div className="grid gap-2">
-            <Label>สถานพยาบาล</Label>
-            <Controller
-              name="hosp_code"
-              control={control}
-              render={({ field }) => (
-                <HospCodeSelect
-                  value={field.value}
-                  onChange={field.onChange}
-                  items={hospitals}
-                  placeholder="เลือกสถานพยาบาล"
-                />
-              )}
-            />
-            {errors.hosp_code && (
-              <p role="alert" className="text-xs text-destructive">
-                {errors.hosp_code.message}
+            <Label htmlFor="username">ชื่อผู้ใช้</Label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="username"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                className="pl-9"
+                aria-invalid={!!errors.username}
+                aria-describedby={errors.username ? 'username-error' : undefined}
+                {...register('username')}
+              />
+            </div>
+            {errors.username && (
+              <p id="username-error" role="alert" className="text-xs text-destructive">
+                {errors.username.message}
               </p>
             )}
           </div>

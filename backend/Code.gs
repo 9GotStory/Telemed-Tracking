@@ -37,20 +37,21 @@ var HASH_ITERATIONS = 10000;
 // Sheet column indexes (0-based) — must match actual sheet header order
 var USERS_COLS = {
   user_id: 0,
-  hosp_code: 1,
-  first_name: 2,
-  last_name: 3,
-  tel: 4,
-  password_hash: 5,
-  password_salt: 6,
-  role: 7,
-  status: 8,
-  approved_by: 9,
-  session_token: 10,
-  session_expires: 11,
-  created_at: 12,
-  last_login: 13,
-  force_change: 14,
+  username: 1,
+  hosp_code: 2,
+  first_name: 3,
+  last_name: 4,
+  tel: 5,
+  password_hash: 6,
+  password_salt: 7,
+  role: 8,
+  status: 9,
+  approved_by: 10,
+  session_token: 11,
+  session_expires: 12,
+  created_at: 13,
+  last_login: 14,
+  force_change: 15,
 };
 
 var HOSPITAL_COLS = {
@@ -196,7 +197,7 @@ var SETTINGS_COLS = {
 
 var SHEET_HEADERS = {
   USERS: [
-    "user_id", "hosp_code", "first_name", "last_name", "tel",
+    "user_id", "username", "hosp_code", "first_name", "last_name", "tel",
     "password_hash", "password_salt", "role", "status", "approved_by",
     "session_token", "session_expires", "created_at", "last_login", "force_change",
   ],
@@ -468,6 +469,7 @@ var TEXT_FORMAT_COLUMNS = {};
 function buildTextFormatMap() {
   // hosp_code, tel, vn, hn are always text — map them from each COLS object
   TEXT_FORMAT_COLUMNS["USERS"] = [
+    USERS_COLS.username,
     USERS_COLS.hosp_code,
     USERS_COLS.tel,
     USERS_COLS.user_id,
@@ -648,6 +650,7 @@ function validateSession(token) {
 
       return {
         user_id: row[USERS_COLS.user_id],
+        username: String(row[USERS_COLS.username]),
         hosp_code: String(row[USERS_COLS.hosp_code]),
         first_name: row[USERS_COLS.first_name],
         last_name: row[USERS_COLS.last_name],
@@ -683,15 +686,15 @@ function getHospName(hospCode) {
 // ---------------------------------------------------------------------------
 
 /**
- * auth.login — Authenticate user with hosp_code + password.
+ * auth.login — Authenticate user with username + password.
  * Public endpoint (no token required).
  */
 function handleLogin(data) {
-  var hospCode = String(data.hosp_code || "").trim();
+  var username = String(data.username || "").trim().toLowerCase();
   var password = String(data.password || "");
-  debugTrace("handleLogin.start", { hosp_code: hospCode });
+  debugTrace("handleLogin.start", { username: username });
 
-  if (!hospCode || !password) {
+  if (!username || !password) {
     return { success: false, error: "กรุณากรอกข้อมูลให้ครบ" };
   }
 
@@ -701,27 +704,20 @@ function handleLogin(data) {
 
   for (var i = 1; i < rows.length; i++) {
     var row = rows[i];
-    if (String(row[USERS_COLS.hosp_code]) !== hospCode) continue;
+    if (String(row[USERS_COLS.username]).toLowerCase() !== username) continue;
 
     // Check account status
     var status = row[USERS_COLS.status];
-    if (status === "pending") {
-      return { success: false, error: "Account pending approval" };
-    }
-    if (status === "inactive") {
-      // Skip inactive accounts — try next user with this hosp_code
-      continue;
-    }
     if (status !== "active") {
-      continue;
+      // Return same message for all non-active states to prevent enumeration
+      return { success: false, error: "Invalid credentials" };
     }
 
-    // Verify password — try this user's credentials
+    // Verify password
     var salt = row[USERS_COLS.password_salt];
     var storedHash = row[USERS_COLS.password_hash];
     if (!verifyPassword(password, salt, storedHash)) {
-      // Password doesn't match this user — try next user with same hosp_code
-      continue;
+      return { success: false, error: "Invalid credentials" };
     }
 
     // Generate session
@@ -745,11 +741,14 @@ function handleLogin(data) {
       row.length > USERS_COLS.force_change &&
       String(row[USERS_COLS.force_change]) === "Y";
 
+    var hospCode = String(row[USERS_COLS.hosp_code]);
+
     return {
       success: true,
       data: {
         token: sessionToken,
         user_id: row[USERS_COLS.user_id],
+        username: username,
         hosp_code: hospCode,
         first_name: row[USERS_COLS.first_name],
         last_name: row[USERS_COLS.last_name],
@@ -769,6 +768,7 @@ function handleLogin(data) {
  */
 function handleRegister(data) {
   debugTrace("handleRegister.start");
+  var username = String(data.username || "").trim().toLowerCase();
   var hospCode = String(data.hosp_code || "").trim();
   var password = String(data.password || "");
   var firstName = String(data.first_name || "").trim();
@@ -776,9 +776,26 @@ function handleRegister(data) {
   var tel = String(data.tel || "").trim();
 
   // Validate required fields
-  if (!hospCode || !password || !firstName || !lastName || !tel) {
+  if (!username || !hospCode || !password || !firstName || !lastName || !tel) {
     return { success: false, error: "กรุณากรอกข้อมูลให้ครบ" };
   }
+
+  // Validate username format: 4-20 chars, lowercase a-z, 0-9, underscore only
+  if (username.length < 4 || username.length > 20) {
+    return { success: false, error: "ชื่อผู้ใช้ต้องมี 4-20 ตัวอักษร" };
+  }
+  if (!/^[a-z0-9_]+$/.test(username)) {
+    return { success: false, error: "ชื่อผู้ใช้ใช้ได้เฉพาะ a-z, 0-9 และ _" };
+  }
+
+  // Reserved usernames
+  var RESERVED = ["admin", "root", "system", "moderator", "superadmin",
+    "administrator", "support", "help", "test", "guest",
+    "null", "undefined", "delete", "remove", "reset"];
+  if (RESERVED.indexOf(username) !== -1) {
+    return { success: false, error: "ชื่อผู้ใช้นี้ไม่อนุญาตให้ใช้งาน" };
+  }
+
   if (hospCode.length !== 5 || !/^\d{5}$/.test(hospCode)) {
     return { success: false, error: "รหัสสถานพยาบาลไม่ถูกต้อง" };
   }
@@ -790,6 +807,15 @@ function handleRegister(data) {
   }
 
   var ss = getSpreadsheet();
+  var usersSheet = ss.getSheetByName("USERS");
+  var userRows = usersSheet.getDataRange().getValues();
+
+  // Check username uniqueness (case-insensitive)
+  for (var k = 1; k < userRows.length; k++) {
+    if (String(userRows[k][USERS_COLS.username]).toLowerCase() === username) {
+      return { success: false, error: "ชื่อผู้ใช้นี้ถูกใช้งานแล้ว" };
+    }
+  }
 
   // Verify hosp_code exists and is active
   var hospitalSheet = ss.getSheetByName("HOSPITAL");
@@ -812,22 +838,6 @@ function handleRegister(data) {
     return { success: false, error: "Invalid hosp_code" };
   }
 
-  // Check if a pending registration already exists for this hosp_code
-  // (allows multiple active users per facility per data-model.md)
-  var usersSheet = ss.getSheetByName("USERS");
-  var userRows = usersSheet.getDataRange().getValues();
-  for (var j = 1; j < userRows.length; j++) {
-    if (
-      String(userRows[j][USERS_COLS.hosp_code]) === hospCode &&
-      userRows[j][USERS_COLS.status] === "pending"
-    ) {
-      return {
-        success: false,
-        error: "มีคำขอลงทะเบียนที่รอการอนุมัติสำหรับรหัสนี้อยู่แล้ว",
-      };
-    }
-  }
-
   // Role is blank at registration — admin assigns role during approval.
   // Exception: first user in system with hosp_type "สสอ." → auto-approve as super_admin.
   var isFirstUser = (usersSheet.getLastRow() === 1); // only header row exists
@@ -844,6 +854,7 @@ function handleRegister(data) {
   var userId = Utilities.getUuid();
   var newRow = [
     userId, // user_id
+    username, // username
     String(hospCode), // hosp_code
     firstName, // first_name
     lastName, // last_name
@@ -893,13 +904,26 @@ function handleLogout(user) {
  * Authenticated endpoint. Clears force_change flag.
  */
 function handleChangePassword(user, data) {
+  var currentPassword = String(data.current_password || "");
   var newPassword = String(data.new_password || "");
+
+  if (!currentPassword) {
+    return { success: false, error: "กรุณากรอกรหัสผ่านปัจจุบัน" };
+  }
   if (!newPassword || newPassword.length < 8) {
     return { success: false, error: "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร" };
   }
 
   var ss = getSpreadsheet();
   var sheet = ss.getSheetByName("USERS");
+  var row = sheet.getRange(user.rowIndex, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+  // Verify current password
+  var salt = row[USERS_COLS.password_salt];
+  var storedHash = row[USERS_COLS.password_hash];
+  if (!verifyPassword(currentPassword, salt, storedHash)) {
+    return { success: false, error: "รหัสผ่านปัจจุบันไม่ถูกต้อง" };
+  }
 
   var newSalt = generateSalt();
   var newHash = hashPassword(newPassword, newSalt);
@@ -4336,6 +4360,7 @@ function handleUsersList(user, params) {
 
     results.push({
       user_id: row[USERS_COLS.user_id],
+      username: String(row[USERS_COLS.username]),
       hosp_code: String(row[USERS_COLS.hosp_code]),
       hosp_name: getHospName(String(row[USERS_COLS.hosp_code])),
       first_name: String(row[USERS_COLS.first_name]),
@@ -4918,7 +4943,7 @@ function setupSheets() {
 
   var sheets = {
     USERS: [
-      "user_id", "hosp_code", "first_name", "last_name", "tel",
+      "user_id", "username", "hosp_code", "first_name", "last_name", "tel",
       "password_hash", "password_salt", "role", "status", "approved_by",
       "session_token", "session_expires", "created_at", "last_login", "force_change",
     ],
@@ -5126,6 +5151,7 @@ function sampleData() {
     var now = new Date().toISOString();
     var adminRow = [
       Utilities.getUuid(), // user_id
+      "admin", // username
       "00588", // hosp_code (สสอ.สอง)
       "ผู้ดูแลระบบ", // first_name
       "", // last_name
@@ -5145,7 +5171,7 @@ function sampleData() {
     ensureTextFormat("USERS", adminNewRow);
     userSheet.getRange(adminNewRow, 1, 1, adminRow.length).setValues([adminRow]);
     Logger.log(
-      "USERS: inserted 1 super_admin (hosp_code=00588, password=password123)",
+      "USERS: inserted 1 super_admin (username=admin, hosp_code=00588, password=password123)",
     );
   } else {
     Logger.log("USERS: skipped (already has data)");

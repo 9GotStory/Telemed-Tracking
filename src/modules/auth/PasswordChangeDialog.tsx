@@ -19,7 +19,7 @@ export function PasswordChangeDialog() {
   const { forceChange, user, clearAuth } = useAuthStore()
 
   const changeMutation = useMutation({
-    mutationFn: (data: { new_password: string }) => authService.changePassword(data),
+    mutationFn: (data: { current_password: string; new_password: string }) => authService.changePassword(data),
     onSuccess: () => {
       sessionStorage.removeItem('force_change')
       useAuthStore.setState({ forceChange: false })
@@ -35,7 +35,10 @@ export function PasswordChangeDialog() {
   })
 
   const onSubmit = (values: PasswordChangeValues) => {
-    changeMutation.mutate({ new_password: values.new_password })
+    changeMutation.mutate({
+      current_password: values.current_password,
+      new_password: values.new_password,
+    })
   }
 
   const handleLogout = () => {
@@ -60,15 +63,36 @@ export function PasswordChangeDialog() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
           <div className="grid gap-2">
+            <Label htmlFor="current_password">รหัสผ่านปัจจุบัน</Label>
+            <Input
+              id="current_password"
+              type="password"
+              autoComplete="current-password"
+              aria-invalid={!!errors.current_password}
+              aria-describedby={errors.current_password ? 'current-password-error' : undefined}
+              {...register('current_password')}
+            />
+            {errors.current_password && (
+              <p id="current-password-error" role="alert" className="text-xs text-destructive">
+                {errors.current_password.message}
+              </p>
+            )}
+          </div>
+
+          <div className="grid gap-2">
             <Label htmlFor="new_password">รหัสผ่านใหม่</Label>
             <Input
               id="new_password"
               type="password"
               autoComplete="new-password"
+              aria-invalid={!!errors.new_password}
+              aria-describedby={errors.new_password ? 'new-password-error' : undefined}
               {...register('new_password')}
             />
             {errors.new_password && (
-              <p className="text-xs text-destructive">{errors.new_password.message}</p>
+              <p id="new-password-error" role="alert" className="text-xs text-destructive">
+                {errors.new_password.message}
+              </p>
             )}
           </div>
 
@@ -78,15 +102,19 @@ export function PasswordChangeDialog() {
               id="confirm_password"
               type="password"
               autoComplete="new-password"
+              aria-invalid={!!errors.confirm_password}
+              aria-describedby={errors.confirm_password ? 'confirm-password-error' : undefined}
               {...register('confirm_password')}
             />
             {errors.confirm_password && (
-              <p className="text-xs text-destructive">{errors.confirm_password.message}</p>
+              <p id="confirm-password-error" role="alert" className="text-xs text-destructive">
+                {errors.confirm_password.message}
+              </p>
             )}
           </div>
 
           {changeMutation.error && (
-            <p className="text-sm text-destructive">{changeMutation.error.message}</p>
+            <p role="alert" className="text-sm text-destructive">{changeMutation.error.message}</p>
           )}
 
           <DialogFooter>

@@ -12,6 +12,13 @@ import { registerSchema, type RegisterFormValues } from '@/services/authService'
 import { useDebugMount } from '@/hooks/useDebugLog'
 import { HospCodeSelect } from '@/components/common/HospCodeSelect'
 import { useHospitalsList } from '@/hooks/useHospitals'
+import { Check, X, User } from 'lucide-react'
+
+/** Username requirements for the hint display */
+const USERNAME_RULES = [
+  { label: '4-20 ตัวอักษร', test: (v: string) => v.length >= 4 && v.length <= 20 },
+  { label: 'ภาษาอังกฤษตัวพิมพ์เล็ก, ตัวเลข, _', test: (v: string) => /^[a-z0-9_]+$/.test(v) },
+]
 
 export default function RegisterPage() {
   useDebugMount('RegisterPage')
@@ -25,11 +32,13 @@ export default function RegisterPage() {
     register,
     handleSubmit,
     control,
+    watch,
     formState: { errors },
     setError,
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
+      username: '',
       hosp_code: '',
       password: '',
       first_name: '',
@@ -37,6 +46,8 @@ export default function RegisterPage() {
       tel: '',
     },
   })
+
+  const usernameValue = watch('username')
 
   const onSubmit = (data: RegisterFormValues) => {
     if (registerMutation.isPending) return
@@ -92,7 +103,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <Card className="w-full max-w-sm">
+    <Card className="w-full max-w-md">
       <CardHeader className="text-center">
         <CardTitle className="text-xl tracking-tight">สมัครสมาชิก</CardTitle>
         <CardDescription>กรอกข้อมูลเพื่อลงทะเบียน</CardDescription>
@@ -105,6 +116,51 @@ export default function RegisterPage() {
             </div>
           )}
 
+          {/* Username field */}
+          <div className="grid gap-2">
+            <Label htmlFor="reg-username">ชื่อผู้ใช้</Label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="reg-username"
+                placeholder="somchai"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                className="pl-9"
+                aria-invalid={!!errors.username}
+                aria-describedby={errors.username ? 'reg-username-error' : undefined}
+                {...register('username')}
+              />
+            </div>
+            {/* Username rule hints */}
+            {usernameValue.length > 0 && (
+              <div className="space-y-1">
+                {USERNAME_RULES.map((rule) => {
+                  const passed = rule.test(usernameValue)
+                  return (
+                    <div key={rule.label} className="flex items-center gap-1.5 text-xs">
+                      {passed ? (
+                        <Check className="h-3 w-3 text-green-600" />
+                      ) : (
+                        <X className="h-3 w-3 text-muted-foreground" />
+                      )}
+                      <span className={passed ? 'text-green-600' : 'text-muted-foreground'}>
+                        {rule.label}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            {errors.username && (
+              <p id="reg-username-error" role="alert" className="text-xs text-destructive">
+                {errors.username.message}
+              </p>
+            )}
+          </div>
+
+          {/* Hospital select */}
           <div className="grid gap-2">
             <Label>สถานพยาบาล</Label>
             <Controller
@@ -126,38 +182,41 @@ export default function RegisterPage() {
             )}
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="reg-first_name">ชื่อ</Label>
-            <Input
-              id="reg-first_name"
-              autoComplete="given-name"
-              aria-invalid={!!errors.first_name}
-              aria-describedby={errors.first_name ? 'reg-first_name-error' : undefined}
-              {...register('first_name')}
-            />
-            {errors.first_name && (
-              <p id="reg-first_name-error" role="alert" className="text-xs text-destructive">
-                {errors.first_name.message}
-              </p>
-            )}
+          {/* Name fields */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-2">
+              <Label htmlFor="reg-first_name">ชื่อ</Label>
+              <Input
+                id="reg-first_name"
+                autoComplete="given-name"
+                aria-invalid={!!errors.first_name}
+                aria-describedby={errors.first_name ? 'reg-first_name-error' : undefined}
+                {...register('first_name')}
+              />
+              {errors.first_name && (
+                <p id="reg-first_name-error" role="alert" className="text-xs text-destructive">
+                  {errors.first_name.message}
+                </p>
+              )}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="reg-last_name">นามสกุล</Label>
+              <Input
+                id="reg-last_name"
+                autoComplete="family-name"
+                aria-invalid={!!errors.last_name}
+                aria-describedby={errors.last_name ? 'reg-last_name-error' : undefined}
+                {...register('last_name')}
+              />
+              {errors.last_name && (
+                <p id="reg-last_name-error" role="alert" className="text-xs text-destructive">
+                  {errors.last_name.message}
+                </p>
+              )}
+            </div>
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="reg-last_name">นามสกุล</Label>
-            <Input
-              id="reg-last_name"
-              autoComplete="family-name"
-              aria-invalid={!!errors.last_name}
-              aria-describedby={errors.last_name ? 'reg-last_name-error' : undefined}
-              {...register('last_name')}
-            />
-            {errors.last_name && (
-              <p id="reg-last_name-error" role="alert" className="text-xs text-destructive">
-                {errors.last_name.message}
-              </p>
-            )}
-          </div>
-
+          {/* Tel */}
           <div className="grid gap-2">
             <Label htmlFor="reg-tel">เบอร์โทรศัพท์</Label>
             <Input
@@ -176,6 +235,7 @@ export default function RegisterPage() {
             )}
           </div>
 
+          {/* Password */}
           <div className="grid gap-2">
             <Label htmlFor="reg-password">รหัสผ่าน</Label>
             <Input

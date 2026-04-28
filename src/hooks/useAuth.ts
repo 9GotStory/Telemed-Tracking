@@ -34,6 +34,7 @@ export function useLogin() {
     onSuccess: (data) => {
       const user: AuthUser = {
         user_id: data.user_id,
+        username: data.username,
         hosp_code: data.hosp_code,
         first_name: data.first_name,
         last_name: data.last_name,
