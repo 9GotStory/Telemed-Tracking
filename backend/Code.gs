@@ -925,6 +925,13 @@ function handleChangePassword(user, data) {
     return { success: false, error: "รหัสผ่านปัจจุบันไม่ถูกต้อง" };
   }
 
+  // Prevent reusing same password (skip check during forced reset)
+  var isForcedChange = row.length > USERS_COLS.force_change &&
+    String(row[USERS_COLS.force_change]) === "Y";
+  if (!isForcedChange && currentPassword === newPassword) {
+    return { success: false, error: "รหัสผ่านใหม่ต้องไม่เหมือนรหัสผ่านปัจจุบัน" };
+  }
+
   var newSalt = generateSalt();
   var newHash = hashPassword(newPassword, newSalt);
 
@@ -1258,53 +1265,35 @@ function handleDashboardStats() {
     }
   }
 
-  // ---- 4. Attendance by clinic_type and facility ----
-  var attendanceByClinic = [];
+  // ---- 4. Attendance by facility (ผู้ใช้บริการ) ----
   var attendanceByFacility = [];
-  var clinicMap = {}; // clinic_type -> { appointed, attended }
   var facilityAttMap = {}; // hosp_code -> { appointed, attended }
 
   // Build appoint_count lookup from CLINIC_SCHEDULE (reuse csData)
-  var scheduleAppointments = {}; // date|code|clinic -> appoint_count
+  var scheduleAppointments = {}; // date|code -> appoint_count
   for (var sa = 1; sa < csData.length; sa++) {
     var saDate = toDateStr(csData[sa][CLINIC_SCHEDULE_COLS.service_date]);
     var saHosp = String(csData[sa][CLINIC_SCHEDULE_COLS.hosp_code]);
-    var saClinic = String(csData[sa][CLINIC_SCHEDULE_COLS.clinic_type]);
-    var saKey = saDate + "|" + saHosp + "|" + saClinic;
+    var saKey = saDate + "|" + saHosp;
     scheduleAppointments[saKey] =
-      Number(csData[sa][CLINIC_SCHEDULE_COLS.appoint_count]) || 0;
+      (scheduleAppointments[saKey] || 0) +
+      (Number(csData[sa][CLINIC_SCHEDULE_COLS.appoint_count]) || 0);
   }
 
   // Count attended from VISIT_SUMMARY (reuse vsData)
-  // Split comma-separated clinic_type so each type is counted separately
   for (var va = 1; va < vsData.length; va++) {
-    var vsClinics = splitClinicTypes(String(vsData[va][VISIT_SUMMARY_COLS.clinic_type]));
     var vsHosp = String(vsData[va][VISIT_SUMMARY_COLS.hosp_code]);
     var vsAttended = String(vsData[va][VISIT_SUMMARY_COLS.attended]);
-
-    for (var vci = 0; vci < vsClinics.length; vci++) {
-      var singleClinic = vsClinics[vci];
-      if (!clinicMap[singleClinic])
-        clinicMap[singleClinic] = { appointed: 0, attended: 0 };
-      if (vsAttended === "Y") clinicMap[singleClinic].attended++;
-    }
 
     if (!facilityAttMap[vsHosp])
       facilityAttMap[vsHosp] = { appointed: 0, attended: 0 };
     if (vsAttended === "Y") facilityAttMap[vsHosp].attended++;
   }
 
-  // Add appoint_count from schedules to maps
+  // Add appoint_count from schedules to facility map
   for (var sk in scheduleAppointments) {
     var parts = sk.split("|");
     var sCode = parts[1] || "";
-    var sClinic = parts[2] || "";
-
-    if (sClinic) {
-      if (!clinicMap[sClinic])
-        clinicMap[sClinic] = { appointed: 0, attended: 0 };
-      clinicMap[sClinic].appointed += scheduleAppointments[sk];
-    }
     if (sCode) {
       if (!facilityAttMap[sCode])
         facilityAttMap[sCode] = { appointed: 0, attended: 0 };
@@ -1312,20 +1301,7 @@ function handleDashboardStats() {
     }
   }
 
-  // Build attendance arrays
-  var clinicKeys = Object.keys(clinicMap);
-  for (var ck = 0; ck < clinicKeys.length; ck++) {
-    var cKey = clinicKeys[ck];
-    var cTotal = clinicMap[cKey].appointed;
-    var cAttended = clinicMap[cKey].attended;
-    attendanceByClinic.push({
-      clinic_type: cKey,
-      total_appointed: cTotal,
-      total_attended: cAttended,
-      rate: cTotal > 0 ? Math.round((cAttended / cTotal) * 1000) / 10 : 0,
-    });
-  }
-
+  // Build attendance array
   var facAttKeys = Object.keys(facilityAttMap);
   for (var fk = 0; fk < facAttKeys.length; fk++) {
     var fKey = facAttKeys[fk];
@@ -1339,9 +1315,6 @@ function handleDashboardStats() {
     });
   }
 
-  attendanceByClinic.sort(function (a, b) {
-    return b.rate - a.rate;
-  });
   attendanceByFacility.sort(function (a, b) {
     return b.rate - a.rate;
   });
@@ -1376,7 +1349,6 @@ function handleDashboardStats() {
       equipment_status: equipmentStatus,
       upcoming_appointments: upcomingAppointments,
       monthly_sessions: monthlySessions,
-      attendance_by_clinic: attendanceByClinic,
       attendance_by_facility: attendanceByFacility,
       followup_pipeline: followupPipeline,
     },

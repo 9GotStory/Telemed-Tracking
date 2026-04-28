@@ -8,6 +8,7 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import LoginPage from '@/modules/auth/LoginPage'
 import RegisterPage from '@/modules/auth/RegisterPage'
 import DashboardPage from '@/modules/dashboard/DashboardPage'
+import AboutPage from '@/modules/about/AboutPage'
 import EquipmentPage from '@/modules/module1/EquipmentPage'
 import MasterDrugPage from '@/modules/master-drugs/MasterDrugPage'
 import SchedulePage from '@/modules/module3/SchedulePage'
@@ -31,7 +32,13 @@ export const router = createBrowserRouter([
   // Dashboard (public, no sidebar)
   {
     path: '/dashboard',
-    element: <DashboardPage />,
+    element: <ErrorBoundary><DashboardPage /></ErrorBoundary>,
+  },
+
+  // About (public, no sidebar)
+  {
+    path: '/about',
+    element: <ErrorBoundary><AboutPage /></ErrorBoundary>,
   },
 
   // Protected routes (auth required, with sidebar layout)

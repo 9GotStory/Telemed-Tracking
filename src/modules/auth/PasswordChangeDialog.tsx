@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { useMutation } from '@tanstack/react-query'
 import { authService } from '@/services/authService'
 import { useAuthStore } from '@/stores/authStore'
+import { toast } from 'sonner'
 
 export function PasswordChangeDialog() {
   const { forceChange, user, clearAuth } = useAuthStore()
@@ -23,6 +24,7 @@ export function PasswordChangeDialog() {
     onSuccess: () => {
       sessionStorage.removeItem('force_change')
       useAuthStore.setState({ forceChange: false })
+      toast.success('เปลี่ยนรหัสผ่านสำเร็จ')
     },
   })
 

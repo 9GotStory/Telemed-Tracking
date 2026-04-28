@@ -63,6 +63,9 @@ export const passwordChangeSchema = z.object({
 }).refine((d) => d.new_password === d.confirm_password, {
   message: 'รหัสผ่านไม่ตรงกัน',
   path: ['confirm_password'],
+}).refine((d) => d.new_password !== d.current_password, {
+  message: 'รหัสผ่านใหม่ต้องไม่เหมือนรหัสผ่านปัจจุบัน',
+  path: ['new_password'],
 })
 
 export type LoginFormValues = z.infer<typeof loginSchema>

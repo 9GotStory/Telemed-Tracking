@@ -12,11 +12,11 @@ import { QueryError } from '@/components/common/QueryError'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { DatePicker } from '@/components/common/DatePicker'
 import { useScheduleList } from '@/modules/module3/useSchedule'
+import { useFacilitiesList } from '@/hooks/useFacilities'
 import { useReadinessList } from './useReadiness'
 import { ReadinessChecklist } from './ReadinessChecklist'
 import { ReadinessHistory } from './ReadinessHistory'
 import { format, addDays } from 'date-fns'
-import { th } from 'date-fns/locale'
 import { ClipboardCheck, History, RotateCcw } from 'lucide-react'
 import { useDebugMount } from '@/hooks/useDebugLog'
 import { READINESS_STATUS_VARIANT, READINESS_STATUS_LABEL } from '@/types/readiness'
@@ -50,24 +50,36 @@ export default function ReadinessPage() {
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd')
   const selectedMonth = format(selectedDate, 'yyyy-MM')
 
-  // Get schedules for the selected date's month
+  // Get all active facilities (รพ.สต. ทุกแห่ง)
+  const { data: facilities = [], isLoading: facilitiesLoading } = useFacilitiesList()
+
+  // Get schedules for the selected date's month (to know which have clinics)
   const { data: schedules = [], isLoading: schedulesLoading, isError: schedulesError, refetch: refetchSchedules } = useScheduleList({ month: selectedMonth })
 
   // Get readiness logs for the selected date
   const { data: readinessLogs = [], isLoading: readinessLoading, isError: readinessError, refetch: refetchReadiness } = useReadinessList({ check_date: selectedDateStr })
 
-  // Build facility list from schedules on selected date
-  const facilitiesWithClinics = useMemo(() => {
-    const map = new Map<string, string>()
+  // Set of hosp_codes that have clinics on the selected date
+  const clinicHospCodes = useMemo(() => {
+    const set = new Set<string>()
     for (const s of schedules) {
       if (s.service_date === selectedDateStr) {
-        if (!map.has(s.hosp_code)) {
-          map.set(s.hosp_code, s.hosp_name ?? s.hosp_code)
-        }
+        set.add(s.hosp_code)
       }
     }
-    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1], 'th'))
+    return set
   }, [schedules, selectedDateStr])
+
+  // All facilities with clinic flag
+  const allFacilities = useMemo(() => {
+    return facilities
+      .map((f) => ({
+        hospCode: f.hosp_code,
+        hospName: f.hosp_name,
+        hasClinic: clinicHospCodes.has(f.hosp_code),
+      }))
+      .sort((a, b) => a.hospName.localeCompare(b.hospName, 'th'))
+  }, [facilities, clinicHospCodes])
 
   // Build readiness lookup by hosp_code for selected date
   const readinessByHosp = useMemo(() => {
@@ -80,9 +92,9 @@ export default function ReadinessPage() {
 
   // Filter to show only unchecked if toggle is on
   const displayedFacilities = useMemo(() => {
-    if (!uncheckedOnly) return facilitiesWithClinics
-    return facilitiesWithClinics.filter(([code]) => !readinessByHosp.has(code))
-  }, [facilitiesWithClinics, uncheckedOnly, readinessByHosp])
+    if (!uncheckedOnly) return allFacilities
+    return allFacilities.filter((f) => !readinessByHosp.has(f.hospCode))
+  }, [allFacilities, uncheckedOnly, readinessByHosp])
 
   // Get history for selected facility — only fetch when dialog is open
   const { data: historyLogs = [] } = useReadinessList(
@@ -90,9 +102,10 @@ export default function ReadinessPage() {
     { enabled: historyDialog.open },
   )
 
-  const isLoading = schedulesLoading || readinessLoading
+  const isLoading = facilitiesLoading || schedulesLoading || readinessLoading
   const tomorrowStr = useMemo(() => format(addDays(new Date(), 1), 'yyyy-MM-dd'), [])
   const isTomorrow = selectedDateStr === tomorrowStr
+  const clinicCount = allFacilities.filter((f) => f.hasClinic).length
 
   return (
     <PageWrapper>
@@ -139,8 +152,10 @@ export default function ReadinessPage() {
             </Button>
           )}
           <span className="text-sm text-muted-foreground">
-            รพ.สต. ที่มีคลินิกวันที่ {format(selectedDate, 'd MMMM yyyy', { locale: th })}
-            {' '}({facilitiesWithClinics.length} แห่ง)
+            ทุกแห่ง {displayedFacilities.length} แห่ง
+            {clinicCount > 0 && (
+              <span className="text-apple-blue"> (มีคลินิก {clinicCount} แห่ง)</span>
+            )}
           </span>
         </div>
 
@@ -151,11 +166,11 @@ export default function ReadinessPage() {
           <QueryError onRetry={() => { refetchSchedules(); refetchReadiness() }} />
         ) : displayedFacilities.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
-            ไม่มีคลินิกในวันที่ {format(selectedDate, 'd MMMM yyyy', { locale: th })}
+            ไม่พบข้อมูลสถานพยาบาล
           </div>
         ) : (
           <div className="grid gap-3">
-            {displayedFacilities.map(([hospCode, hospName]) => {
+            {displayedFacilities.map(({ hospCode, hospName, hasClinic }) => {
               const log = readinessByHosp.get(hospCode)
               const isChecked = !!log
 
@@ -166,6 +181,9 @@ export default function ReadinessPage() {
                 >
                   <div className="flex items-center gap-3">
                     <span className="font-medium text-sm">{hospName}</span>
+                    {!hasClinic && (
+                      <StatusBadge variant="pending">ไม่มีคลินิก</StatusBadge>
+                    )}
                     {isChecked ? (
                       <StatusBadge variant={READINESS_STATUS_VARIANT[log.overall_status as OverallStatus] ?? 'pending'}>
                         {READINESS_STATUS_LABEL[log.overall_status as OverallStatus] ?? log.overall_status}

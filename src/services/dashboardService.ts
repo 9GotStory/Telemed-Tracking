@@ -21,8 +21,7 @@ const upcomingAppointmentSchema = z.object({
 })
 
 const attendanceRowSchema = z.object({
-  clinic_type: z.string().optional(),
-  hosp_name: z.string().optional(),
+  hosp_name: z.string(),
   total_appointed: z.number(),
   total_attended: z.number(),
   rate: z.number(),
@@ -39,7 +38,6 @@ export const dashboardStatsSchema = z.object({
   equipment_status: z.array(equipmentStatusSchema),
   upcoming_appointments: z.array(upcomingAppointmentSchema),
   monthly_sessions: monthlySessionsSchema,
-  attendance_by_clinic: z.array(attendanceRowSchema),
   attendance_by_facility: z.array(attendanceRowSchema),
   followup_pipeline: followupPipelineSchema,
 })
