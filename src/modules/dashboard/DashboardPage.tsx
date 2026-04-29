@@ -8,7 +8,7 @@ import { FollowupPipeline } from './FollowupPipeline'
 import { useDebugMount } from '@/hooks/useDebugLog'
 import { format, addDays } from 'date-fns'
 import { Link } from 'react-router-dom'
-import { Activity } from 'lucide-react'
+import { Activity, LogIn } from 'lucide-react'
 
 export default function DashboardPage() {
   useDebugMount('DashboardPage')
@@ -63,6 +63,17 @@ export default function DashboardPage() {
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-4 py-2 text-sm">
               พรุ่งนี้ {tomorrowAppts.reduce((s, a) => s + a.appoint_count, 0)} นัด
             </span>
+          </div>
+
+          {/* Login button */}
+          <div className="mt-8">
+            <Link
+              to="/login"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-white text-black hover:bg-white/90 px-6 py-2 text-sm font-medium transition-colors"
+            >
+              <LogIn className="h-4 w-4" />
+              เข้าสู่ระบบ
+            </Link>
           </div>
         </div>
       </section>

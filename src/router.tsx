@@ -120,11 +120,14 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // Default + catch-all → redirect to login (inside PublicLayout for proper styling)
+  // Default → Dashboard, catch-all → login
+  {
+    path: '/',
+    element: <ErrorBoundary><DashboardPage /></ErrorBoundary>,
+  },
   {
     element: <PublicLayout />,
     children: [
-      { path: '/', element: <LoginPage /> },
       { path: '*', element: <LoginPage /> },
     ],
   },
