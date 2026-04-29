@@ -5,6 +5,7 @@ import { EditablePhone } from '@/components/common/EditablePhone'
 import { Button } from '@/components/ui/button'
 import { DrugConfirmationPanel } from './DrugConfirmationPanel'
 import { DrugTrackingStatus } from './DrugTrackingStatus'
+import { DrugImageSection } from './DrugImageSection'
 import { useVisitMedsList, useBatchConfirm } from './useDrugConfirm'
 import { useAuthStore } from '@/stores/authStore'
 import type { VisitSummaryItem } from '@/services/visitService'
@@ -278,6 +279,7 @@ function PatientCard({
                   userRole={user.role}
                 />
               )}
+              <DrugImageSection vn={patient.vn} />
             </>
           )}
         </div>

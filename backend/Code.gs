@@ -186,6 +186,21 @@ var FOLLOWUP_COLS = {
   recorded_at: 8,
 };
 
+var VISIT_IMAGES_COLS = {
+  image_id: 0,
+  vn: 1,
+  file_id: 2,
+  file_url: 3,
+  filename: 4,
+  uploaded_by: 5,
+  uploaded_at: 6,
+};
+
+var MAX_IMAGES_PER_VN = 10;
+
+// Google Drive folder for drug evidence images — set before deployment
+var DRIVE_FOLDER_ID = "1McL8l-YysdztP-BCegBNNIdenJ76yrxb"; // TODO: replace with actual Drive folder ID
+
 var SETTINGS_COLS = {
   key: 0,
   value: 1,
@@ -1089,6 +1104,18 @@ function routeAction(action, data, user) {
     "visitMeds.trackDelivery": function () {
       return handleVisitMedsTrackDelivery(user, data);
     },
+    "visitImages.list": function () {
+      return handleVisitImagesList(user, data);
+    },
+    "visitImages.upload": function () {
+      return handleVisitImagesUpload(user, data);
+    },
+    "visitImages.delete": function () {
+      return handleVisitImagesDelete(user, data);
+    },
+    "visitImages.serve": function () {
+      return handleVisitImagesServe(user, data);
+    },
     "followup.list": function () {
       return handleFollowupList(user, data);
     },
@@ -1876,18 +1903,17 @@ function handleMasterDrugSave(user, data) {
   var isNew = !drugId;
   var oldValues = null;
 
-  // C1: Check for duplicate drug_name (case-insensitive) for new drugs
+  // C1: Check for duplicate drug_name+strength (case-insensitive)
   var allRows = sheet.getDataRange().getValues();
-  var drugNameLower = drugName.toLowerCase();
+  var newKey = drugName.toLowerCase() + "|" + String(strength).toLowerCase();
   for (var k = 1; k < allRows.length; k++) {
-    var existingName = String(
-      allRows[k][MASTER_DRUG_COLS.drug_name],
-    ).toLowerCase();
-    if (existingName === drugNameLower) {
+    var existingKey = String(allRows[k][MASTER_DRUG_COLS.drug_name]).toLowerCase()
+      + "|" + String(allRows[k][MASTER_DRUG_COLS.strength]).toLowerCase();
+    if (existingKey === newKey) {
       // For new drugs, always reject duplicates
       // For updates, reject only if the duplicate belongs to a different drug_id
       if (isNew || allRows[k][MASTER_DRUG_COLS.drug_id] !== drugId) {
-        return { success: false, error: "Drug name already exists" };
+        return { success: false, error: "ชื่อยาและความแรงนี้มีอยู่ในระบบแล้ว" };
       }
     }
   }
@@ -1911,16 +1937,18 @@ function handleMasterDrugSave(user, data) {
           active: rows[i][MASTER_DRUG_COLS.active],
         };
 
-        // FK check: cannot change drug_name if referenced in VISIT_MEDS
-        if (oldDrugName !== drugName) {
+        // FK check: cannot change drug_name or strength if referenced in VISIT_MEDS
+        var oldStrength = String(rows[i][MASTER_DRUG_COLS.strength]);
+        if (oldDrugName !== drugName || oldStrength !== String(strength)) {
           var visitMedsSheet = ss.getSheetByName("VISIT_MEDS");
           if (visitMedsSheet) {
             var medRows = visitMedsSheet.getDataRange().getValues();
             for (var j = 1; j < medRows.length; j++) {
-              if (medRows[j][VISIT_MEDS_COLS.drug_name] === oldDrugName) {
+              if (medRows[j][VISIT_MEDS_COLS.drug_name] === oldDrugName
+                  && String(medRows[j][VISIT_MEDS_COLS.strength]) === oldStrength) {
                 return {
                   success: false,
-                  error: "Cannot change drug_name: referenced in VISIT_MEDS",
+                  error: "Cannot change drug_name/strength: referenced in VISIT_MEDS",
                 };
               }
             }
@@ -2021,7 +2049,7 @@ function handleMasterDrugDelete(user, data) {
 /**
  * masterDrug.import — POST, batch import drugs from Excel.
  * Access: super_admin, admin_hosp only.
- * Skips duplicates (by drug_name), validates required fields.
+ * Skips duplicates (by drug_name+strength composite), validates required fields.
  */
 function handleMasterDrugImport(user, data) {
   // Access control
@@ -2037,16 +2065,15 @@ function handleMasterDrugImport(user, data) {
   var ss = getSpreadsheet();
   var sheet = ss.getSheetByName("MASTER_DRUGS");
 
-  // Build existing drug_name set for dedup — only ACTIVE drugs (H2)
+  // Build existing drug key set for dedup (drug_name|strength) — only ACTIVE drugs
   // Inactive drugs can be re-imported
   var existingRows = sheet.getDataRange().getValues();
-  var existingNames = {};
+  var existingKeys = {};
   for (var i = 1; i < existingRows.length; i++) {
     if (existingRows[i][MASTER_DRUG_COLS.active] === "Y") {
-      var name = String(
-        existingRows[i][MASTER_DRUG_COLS.drug_name],
-      ).toLowerCase();
-      existingNames[name] = true;
+      var key = String(existingRows[i][MASTER_DRUG_COLS.drug_name]).toLowerCase()
+        + "|" + String(existingRows[i][MASTER_DRUG_COLS.strength]).toLowerCase();
+      existingKeys[key] = true;
     }
   }
 
@@ -2078,8 +2105,9 @@ function handleMasterDrugImport(user, data) {
       continue;
     }
 
-    // Check duplicate
-    if (existingNames[drugName.toLowerCase()]) {
+    // Check duplicate by composite key
+    var drugKey = drugName.toLowerCase() + "|" + strength.toLowerCase();
+    if (existingKeys[drugKey]) {
       skipped++;
       continue;
     }
@@ -2087,8 +2115,9 @@ function handleMasterDrugImport(user, data) {
     // Collect for batch insert
     var newId = Utilities.getUuid();
     newRows.push([newId, drugName, strength, unit, active]);
-    existingNames[drugName.toLowerCase()] = true;
+    existingKeys[drugKey] = true;
     imported++;
+  }
   }
 
   // H1: Batch insert all new rows in a single setValues call
@@ -2834,16 +2863,18 @@ function handleImportPreview(user, data) {
     }
   }
 
-  // Build valid drug_name set from MASTER_DRUGS
+  // Build valid drug key set from MASTER_DRUGS (drug_name|strength composite)
   var mdSheet = ss.getSheetByName("MASTER_DRUGS");
   var validDrugs = {};
+  var validDrugNames = {}; // fallback: track by name only for drugs without strength
   if (mdSheet) {
     var mdData = mdSheet.getDataRange().getValues();
     for (var m = 1; m < mdData.length; m++) {
       if (mdData[m][MASTER_DRUG_COLS.active] === "Y") {
-        validDrugs[
-          String(mdData[m][MASTER_DRUG_COLS.drug_name]).toLowerCase()
-        ] = true;
+        var mdName = String(mdData[m][MASTER_DRUG_COLS.drug_name]).toLowerCase();
+        var mdStr = String(mdData[m][MASTER_DRUG_COLS.strength]).toLowerCase();
+        validDrugs[mdName + "|" + mdStr] = true;
+        validDrugNames[mdName] = true;
       }
     }
   }
@@ -2874,11 +2905,14 @@ function handleImportPreview(user, data) {
       );
     }
 
-    // Check drug_names
+    // Check drug_names+strength against MASTER_DRUGS
     for (var d = 0; d < drugs.length; d++) {
       var drugName = String(drugs[d].drug_name || "").trim();
       if (!drugName) continue;
-      if (!validDrugs[drugName.toLowerCase()]) {
+      var drugStr = String(drugs[d].strength || "").trim().toLowerCase();
+      var drugKey = drugName.toLowerCase() + "|" + drugStr;
+      // Check composite key first; if strength is missing, fallback to name-only check
+      if (!validDrugs[drugKey] && (drugStr || !validDrugNames[drugName.toLowerCase()])) {
         unknownDrugSet[drugName] = true;
         hasUnknownDrug = true;
       }
@@ -3911,6 +3945,283 @@ function handleVisitMedsTrackDelivery(user, data) {
     success: true,
     data: { message: "อัปเดตสถานะการจัดส่งสำเร็จ", vn: vn, field: field, date: dateVal },
   };
+}
+
+// ---------------------------------------------------------------------------
+// visitImages.* — Drug evidence image management
+// ---------------------------------------------------------------------------
+
+/**
+ * Helper: verify VN ownership for staff_hsc.
+ * Returns the VISIT_SUMMARY row index (1-based) or -1 if not found / denied.
+ */
+function findVsRowForUser(vsData, vn, user) {
+  for (var v = 1; v < vsData.length; v++) {
+    if (String(vsData[v][VISIT_SUMMARY_COLS.vn]) === vn) {
+      if (user.role === "staff_hsc") {
+        if (String(vsData[v][VISIT_SUMMARY_COLS.hosp_code]) !== user.hosp_code) {
+          return -2; // access denied
+        }
+      }
+      return v;
+    }
+  }
+  return -1; // not found
+}
+
+/**
+ * visitImages.list — GET, list images for a VN.
+ * Access: same as Module 5 (staff_hsc own hosp_code, others see all).
+ */
+function handleVisitImagesList(user, data) {
+  var vn = String(data.vn || "").trim();
+  if (!vn) return { success: false, error: "vn is required" };
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var vsSheet = ss.getSheetByName("VISIT_SUMMARY");
+  if (!vsSheet) return { success: false, error: "VISIT_SUMMARY sheet not found" };
+
+  var vsData = vsSheet.getDataRange().getValues();
+  var vsIdx = findVsRowForUser(vsData, vn, user);
+  if (vsIdx === -1) return { success: false, error: "VN not found" };
+  if (vsIdx === -2) return { success: false, error: "Access denied" };
+
+  var imgSheet = ss.getSheetByName("VISIT_IMAGES");
+  if (!imgSheet) return { success: true, data: [] };
+
+  var imgData = imgSheet.getDataRange().getValues();
+  var images = [];
+
+  for (var i = 1; i < imgData.length; i++) {
+    if (String(imgData[i][VISIT_IMAGES_COLS.vn]) === vn) {
+      images.push({
+        image_id: String(imgData[i][VISIT_IMAGES_COLS.image_id] || ""),
+        vn: vn,
+        file_url: String(imgData[i][VISIT_IMAGES_COLS.file_url] || ""),
+        filename: String(imgData[i][VISIT_IMAGES_COLS.filename] || ""),
+        uploaded_by: String(imgData[i][VISIT_IMAGES_COLS.uploaded_by] || ""),
+        uploaded_at: String(imgData[i][VISIT_IMAGES_COLS.uploaded_at] || ""),
+      });
+    }
+  }
+
+  return { success: true, data: images };
+}
+
+/**
+ * visitImages.upload — POST, upload a drug evidence image.
+ * Input: { vn, filename, mimeType, base64 }
+ * Access: all Module 5 roles (staff_hsc own hosp_code, others unrestricted).
+ */
+function handleVisitImagesUpload(user, data) {
+  var vn = String(data.vn || "").trim();
+  var filename = String(data.filename || "").trim();
+  var mimeType = String(data.mimeType || "image/jpeg");
+  var base64Data = String(data.base64 || "");
+
+  if (!vn) return { success: false, error: "vn is required" };
+  if (!base64Data) return { success: false, error: "base64 is required" };
+  if (!DRIVE_FOLDER_ID) return { success: false, error: "Drive folder not configured" };
+
+  // Validate MIME type — only image types allowed
+  var ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp"];
+  if (ALLOWED_MIME.indexOf(mimeType) === -1) {
+    return { success: false, error: "Unsupported image type" };
+  }
+
+  // Validate base64 payload size (max 5MB decoded)
+  var MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+  if (base64Data.length * 0.75 > MAX_IMAGE_BYTES) {
+    return { success: false, error: "Image too large (max 5MB)" };
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var vsSheet = ss.getSheetByName("VISIT_SUMMARY");
+  if (!vsSheet) return { success: false, error: "VISIT_SUMMARY sheet not found" };
+
+  var vsData = vsSheet.getDataRange().getValues();
+  var vsIdx = findVsRowForUser(vsData, vn, user);
+  if (vsIdx === -1) return { success: false, error: "VN not found" };
+  if (vsIdx === -2) return { success: false, error: "Access denied" };
+
+  // Ensure VISIT_IMAGES sheet exists
+  var imgSheet = ss.getSheetByName("VISIT_IMAGES");
+  if (!imgSheet) {
+    imgSheet = ss.insertSheet("VISIT_IMAGES");
+    imgSheet.appendRow(["image_id", "vn", "file_id", "file_url", "filename", "uploaded_by", "uploaded_at"]);
+  }
+
+  // Check max images per VN
+  var imgData = imgSheet.getDataRange().getValues();
+  var count = 0;
+  for (var i = 1; i < imgData.length; i++) {
+    if (String(imgData[i][VISIT_IMAGES_COLS.vn]) === vn) count++;
+  }
+  if (count >= MAX_IMAGES_PER_VN) {
+    return { success: false, error: "Maximum " + MAX_IMAGES_PER_VN + " images per visit" };
+  }
+
+  // Decode base64 and upload to Drive
+  var driveFile = null;
+  try {
+    var decoded = Utilities.base64Decode(base64Data);
+    var blob = Utilities.newBlob(decoded, mimeType, filename);
+
+    var folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+    driveFile = folder.createFile(blob);
+    driveFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+    // Wait for sharing to propagate before URL becomes accessible
+    Utilities.sleep(2000);
+
+    var fileId = driveFile.getId();
+    // Use uc?export=view — the most reliable format for <img> embedding (2024+)
+    var fileUrl = "https://drive.google.com/uc?export=view&id=" + fileId;
+
+    var imageId = Utilities.getUuid();
+    var now = new Date().toISOString();
+
+    // Write to sheet — cleanup Drive file on failure
+    try {
+      imgSheet.appendRow([imageId, vn, fileId, fileUrl, filename, user.user_id, now]);
+    } catch (sheetErr) {
+      try { driveFile.setTrashed(true); } catch (_) {}
+      throw sheetErr;
+    }
+
+    appendAuditLog(user, "IMAGE_UPLOAD", "VISIT_IMAGES", imageId, null, { vn: vn, filename: filename });
+
+    return {
+      success: true,
+      data: {
+        image_id: imageId,
+        vn: vn,
+        file_url: fileUrl,
+        filename: filename,
+        uploaded_by: user.user_id,
+        uploaded_at: now,
+      },
+    };
+  } catch (e) {
+    return { success: false, error: "Upload failed: " + String(e.message || e) };
+  }
+}
+
+/**
+ * visitImages.delete — POST, delete a drug evidence image.
+ * Input: { image_id }
+ * Access: all Module 5 roles (staff_hsc own hosp_code).
+ */
+function handleVisitImagesDelete(user, data) {
+  var imageId = String(data.image_id || "").trim();
+  if (!imageId) return { success: false, error: "image_id is required" };
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var imgSheet = ss.getSheetByName("VISIT_IMAGES");
+  if (!imgSheet) return { success: false, error: "VISIT_IMAGES sheet not found" };
+
+  var imgData = imgSheet.getDataRange().getValues();
+  var rowIdx = -1;
+  var vn = "";
+  var fileId = "";
+
+  for (var i = 1; i < imgData.length; i++) {
+    if (String(imgData[i][VISIT_IMAGES_COLS.image_id]) === imageId) {
+      rowIdx = i;
+      vn = String(imgData[i][VISIT_IMAGES_COLS.vn]);
+      fileId = String(imgData[i][VISIT_IMAGES_COLS.file_id]);
+      break;
+    }
+  }
+
+  if (rowIdx === -1) return { success: false, error: "Image not found" };
+
+  // Verify VN exists and check ownership for staff_hsc
+  var vsSheet = ss.getSheetByName("VISIT_SUMMARY");
+  if (!vsSheet) return { success: false, error: "VISIT_SUMMARY sheet not found" };
+  var vsData = vsSheet.getDataRange().getValues();
+  var vsCheck = findVsRowForUser(vsData, vn, user);
+  if (vsCheck === -1) return { success: false, error: "VN not found in visit records" };
+  if (vsCheck === -2) return { success: false, error: "Access denied" };
+
+  // Delete from Drive
+  try {
+    if (fileId) {
+      DriveApp.getFileById(fileId).setTrashed(true);
+    }
+  } catch (e) {
+    // File may already be deleted — continue with sheet cleanup
+    Logger.log("Warning: could not trash Drive file " + fileId + ": " + e);
+  }
+
+  // Delete row from sheet (rowIdx is 0-based data index, sheet row = rowIdx + 1)
+  imgSheet.deleteRow(rowIdx + 1);
+
+  appendAuditLog(user, "IMAGE_DELETE", "VISIT_IMAGES", imageId, null, { vn: vn });
+
+  return { success: true, data: { message: "ลบรูปภาพสำเร็จ" } };
+}
+
+/**
+ * visitImages.serve — GET, serve image base64 data from Drive.
+ * Used as a proxy since Drive public URLs are unreliable for <img> embedding.
+ * Access: same as visitImages.list (all Module 5 roles, staff_hsc filtered).
+ */
+function handleVisitImagesServe(user, data) {
+  var imageId = String(data.image_id || "").trim();
+  if (!imageId) return { success: false, error: "image_id is required" };
+
+  // Allowed roles
+  var role = user.role;
+  if (role !== "super_admin" && role !== "admin_hosp" && role !== "staff_hosp" && role !== "staff_hsc" && role !== "staff_sao") {
+    return { success: false, error: "Access denied" };
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var imgSheet = ss.getSheetByName("VISIT_IMAGES");
+  if (!imgSheet) return { success: false, error: "VISIT_IMAGES sheet not found" };
+
+  var imgData = imgSheet.getDataRange().getValues();
+  var fileId = "";
+  var vn = "";
+
+  for (var i = 1; i < imgData.length; i++) {
+    if (String(imgData[i][VISIT_IMAGES_COLS.image_id]) === imageId) {
+      fileId = String(imgData[i][VISIT_IMAGES_COLS.file_id]);
+      vn = String(imgData[i][VISIT_IMAGES_COLS.vn]);
+      break;
+    }
+  }
+
+  if (!fileId) return { success: false, error: "Image not found" };
+
+  // Verify VN exists; staff_hsc additionally checks hosp_code ownership
+  var vsSheet = ss.getSheetByName("VISIT_SUMMARY");
+  if (!vsSheet) return { success: false, error: "VISIT_SUMMARY sheet not found" };
+  var vsData = vsSheet.getDataRange().getValues();
+  var vsCheck = findVsRowForUser(vsData, vn, user);
+  if (vsCheck === -1) return { success: false, error: "VN not found" };
+  if (vsCheck === -2) return { success: false, error: "Access denied" };
+
+  // Read file from Drive and return as base64
+  try {
+    var file = DriveApp.getFileById(fileId);
+    var blob = file.getBlob();
+    var bytes = blob.getBytes();
+    var base64 = Utilities.base64Encode(bytes);
+    var mimeType = blob.getContentType() || "image/jpeg";
+
+    return {
+      success: true,
+      data: {
+        image_id: imageId,
+        mime_type: mimeType,
+        base64: base64
+      }
+    };
+  } catch (e) {
+    return { success: false, error: "Could not read file from Drive: " + e.message };
+  }
 }
 
 /**
@@ -5231,6 +5542,16 @@ function sampleData() {
     );
   } else {
     Logger.log("USERS: skipped (already has data)");
+  }
+
+  // --- VISIT_IMAGES ---
+  var imgSheet = ss.getSheetByName("VISIT_IMAGES");
+  if (!imgSheet) {
+    imgSheet = ss.insertSheet("VISIT_IMAGES");
+    imgSheet.appendRow(["image_id", "vn", "file_id", "file_url", "filename", "uploaded_by", "uploaded_at"]);
+    Logger.log("VISIT_IMAGES: created sheet with header");
+  } else {
+    Logger.log("VISIT_IMAGES: skipped (sheet exists)");
   }
 
   Logger.log("Sample data complete.");

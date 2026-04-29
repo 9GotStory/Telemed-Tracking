@@ -46,7 +46,7 @@ export default function EquipmentPage() {
   const { data: equipment = [], isLoading, isError, refetch } = useEquipmentList(filters)
   const deleteMutation = useEquipmentDelete()
 
-  const showHospName = user?.role === 'admin_hosp' || user?.role === 'super_admin'
+  const showHospName = user?.role !== 'staff_hsc'
 
   const handleEdit = (item: EquipmentWithHospName) => {
     setEditingItem(item)

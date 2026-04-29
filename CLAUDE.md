@@ -277,9 +277,10 @@ export async function gasPost<T>(action: string, data: unknown = {}): Promise<T>
 - `hosp_stock` — ยาของ รพ. ที่อยู่ใน batch **(default สำหรับทุกรายการใน import รอบ 1)**
 - `hosp_pending` — ยาที่ รพ. จะส่งมาภายหลัง → flag ให้พยาบาลติดตาม
 
-### drug_name FK Policy
-- VISIT_MEDS อ้างอิง MASTER_DRUGS ด้วย `drug_name` (natural key ไม่ใช่ drug_id)
-- ห้ามเปลี่ยน `drug_name` ใน MASTER_DRUGS ถ้ามีข้อมูลใน VISIT_MEDS แล้ว
+### drug_name + strength FK Policy
+- VISIT_MEDS อ้างอิง MASTER_DRUGS ด้วย composite key `drug_name + strength` (natural key ไม่ใช่ drug_id)
+- `drug_name` ซ้ำได้ ตราบใดที่ `strength` ต่างกัน (เช่น Metformin 500 mg / Metformin 1000 mg)
+- ห้ามเปลี่ยน `drug_name` หรือ `strength` ใน MASTER_DRUGS ถ้ามีข้อมูลใน VISIT_MEDS แล้ว
 - การ "ลบ" ยาออกจาก dropdown ให้ set `active = N` ไม่ใช่ลบ row
 
 ### actual_count (Module 3)
