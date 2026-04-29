@@ -20,7 +20,9 @@ export function useSettingsSave() {
     mutationFn: (data: SettingsSaveData) => settingsService.save(data),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: settingsKeys.all })
-      if (!variables.telegram_test) {
+      if (variables.telegram_test) {
+        // Test send — toast handled by caller via mutate() callbacks
+      } else {
         toast.success('บันทึกตั้งค่าสำเร็จ')
       }
     },

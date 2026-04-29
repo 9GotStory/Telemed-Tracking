@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
@@ -68,7 +68,7 @@ export function TelegramSettings() {
     notify_new_user: settingsMap.notify_new_user ?? DEFAULTS.notify_new_user,
   }
 
-  const { register, handleSubmit, getValues, setValue, watch, formState: { errors } } = useForm<TelegramFormValues>({
+  const { register, handleSubmit, getValues, control, formState: { errors } } = useForm<TelegramFormValues>({
     resolver: zodResolver(telegramSchema),
     defaultValues: formValues,
     values: formValues,
@@ -153,10 +153,16 @@ export function TelegramSettings() {
               </Label>
               <p className="text-xs text-muted-foreground">{type.description}</p>
             </div>
-            <Switch
-              id={type.key}
-              checked={watch(type.key) === 'Y'}
-              onCheckedChange={(checked) => setValue(type.key, checked ? 'Y' : 'N', { shouldDirty: true })}
+            <Controller
+              name={type.key}
+              control={control}
+              render={({ field }) => (
+                <Switch
+                  id={type.key}
+                  checked={field.value === 'Y'}
+                  onCheckedChange={(checked) => field.onChange(checked ? 'Y' : 'N')}
+                />
+              )}
             />
           </div>
         ))}
