@@ -8,13 +8,38 @@ import { FollowupPipeline } from './FollowupPipeline'
 import { useDebugMount } from '@/hooks/useDebugLog'
 import { format, addDays } from 'date-fns'
 import { Link } from 'react-router-dom'
-import { Activity, LogIn } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
+import { isModuleAllowed } from '@/utils/roleGuard'
+import { getRoleHomePath } from '@/hooks/useAuth'
+import {
+  Activity, LogIn, Monitor, ClipboardCheck, Calendar,
+  FileUp, Pill, Phone, Package, Users, Settings, ArrowRight,
+} from 'lucide-react'
+import type { UserRole } from '@/types/user'
+
+interface ModuleLink {
+  to: string
+  label: string
+  icon: React.ReactNode
+  module: string
+}
+
+const MODULE_LINKS: ModuleLink[] = [
+  { to: '/module3', label: 'ตารางคลินิก', icon: <Calendar className="h-5 w-5" />, module: 'module3' },
+  { to: '/module4', label: 'นำเข้าข้อมูล', icon: <FileUp className="h-5 w-5" />, module: 'module4' },
+  { to: '/module5', label: 'ยืนยันรายการยา', icon: <Pill className="h-5 w-5" />, module: 'module5' },
+  { to: '/module6', label: 'ติดตามผู้ป่วย', icon: <Phone className="h-5 w-5" />, module: 'module6' },
+  { to: '/module1', label: 'ทะเบียนอุปกรณ์', icon: <Monitor className="h-5 w-5" />, module: 'module1' },
+  { to: '/module2', label: 'ตรวจสอบความพร้อม', icon: <ClipboardCheck className="h-5 w-5" />, module: 'module2' },
+  { to: '/master-drugs', label: 'คลังชื่อยา', icon: <Package className="h-5 w-5" />, module: 'master-drugs' },
+  { to: '/users', label: 'จัดการผู้ใช้', icon: <Users className="h-5 w-5" />, module: 'users' },
+  { to: '/settings', label: 'ตั้งค่าระบบ', icon: <Settings className="h-5 w-5" />, module: 'settings' },
+]
 
 export default function DashboardPage() {
   useDebugMount('DashboardPage')
   const { data: stats, isLoading, error } = useDashboardStats()
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const { user, isAuthenticated } = useAuthStore()
 
   const appName = import.meta.env.VITE_APP_NAME || 'Telemed Tracking'
 
@@ -42,6 +67,10 @@ export default function DashboardPage() {
   const todayAppts = stats.upcoming_appointments.filter((a) => a.service_date === todayStr)
   const tomorrowAppts = stats.upcoming_appointments.filter((a) => a.service_date === tomorrowStr)
 
+  const visibleModules = isAuthenticated && user
+    ? MODULE_LINKS.filter((m) => isModuleAllowed(m.module, user.role as UserRole))
+    : []
+
   return (
     <div className="min-h-svh bg-[#f5f5f7]">
       {/* Hero — dark background */}
@@ -67,8 +96,22 @@ export default function DashboardPage() {
             </span>
           </div>
 
-          {/* Login button — hidden when already authenticated */}
-          {!isAuthenticated && (
+          {/* Authenticated user info + login button */}
+          {isAuthenticated && user ? (
+            <div className="mt-8 flex flex-wrap items-center gap-4">
+              <div className="rounded-full bg-white/10 px-4 py-2 text-sm">
+                <span className="text-white/60">สวัสดี </span>
+                <span className="font-medium">{user.first_name}</span>
+              </div>
+              <Link
+                to={getRoleHomePath(user.role)}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#2997ff] text-white hover:bg-[#2997ff]/90 px-5 py-2 text-sm font-medium transition-colors"
+              >
+                ไปหน้างาน
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          ) : (
             <div className="mt-8">
               <Link
                 to="/login"
@@ -81,6 +124,24 @@ export default function DashboardPage() {
           )}
         </div>
       </section>
+
+      {/* Module shortcuts — authenticated only */}
+      {visibleModules.length > 0 && (
+        <div className="max-w-[980px] mx-auto px-4 -mt-6">
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+            {visibleModules.map((m) => (
+              <Link
+                key={m.to}
+                to={m.to}
+                className="flex flex-col items-center gap-2 rounded-xl bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.1)] transition-shadow text-center group"
+              >
+                <span className="text-[#86868b] group-hover:text-[#1d1d1f] transition-colors">{m.icon}</span>
+                <span className="text-xs font-medium text-[#1d1d1f] leading-tight">{m.label}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="max-w-[980px] mx-auto px-4 py-10 flex flex-col gap-12">
         {/* Key Metrics */}

@@ -3,6 +3,7 @@ import { useAuditLogList } from './useAuditLog'
 import { QueryError } from '@/components/common/QueryError'
 import { formatBuddhist } from '@/utils/dateUtils'
 import { maskAuditValue } from '@/utils/sensitiveData'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -10,7 +11,10 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { AuditLogItem } from '@/services/auditLogService'
+
+const PAGE_SIZE = 50
 
 function formatTimestamp(iso: string): string {
   if (!iso) return '-'
@@ -120,6 +124,10 @@ function DetailDialog({ log, open, onOpenChange }: {
 export function AuditLogTable() {
   const { data: logs = [], isLoading, isError, refetch } = useAuditLogList(200)
   const [selectedLog, setSelectedLog] = useState<AuditLogItem | null>(null)
+  const [page, setPage] = useState(1)
+
+  const totalPages = Math.max(1, Math.ceil(logs.length / PAGE_SIZE))
+  const pageLogs = logs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   if (isLoading) {
     return <div className="text-center py-8 text-muted-foreground">กำลังโหลด...</div>
@@ -148,7 +156,7 @@ export function AuditLogTable() {
             </tr>
           </thead>
           <tbody>
-            {logs.map((log) => (
+            {pageLogs.map((log) => (
               <tr
                 key={log.log_id}
                 className="border-b hover:bg-muted/30 cursor-pointer"
@@ -188,6 +196,38 @@ export function AuditLogTable() {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-4">
+          <p className="text-xs text-muted-foreground">
+            {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, logs.length)} จาก {logs.length}
+          </p>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm px-2">
+              {page} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       <DetailDialog
         log={selectedLog}
