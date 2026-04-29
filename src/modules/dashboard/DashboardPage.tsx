@@ -9,10 +9,12 @@ import { useDebugMount } from '@/hooks/useDebugLog'
 import { format, addDays } from 'date-fns'
 import { Link } from 'react-router-dom'
 import { Activity, LogIn } from 'lucide-react'
+import { useAuthStore } from '@/stores/authStore'
 
 export default function DashboardPage() {
   useDebugMount('DashboardPage')
   const { data: stats, isLoading, error } = useDashboardStats()
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
   const appName = import.meta.env.VITE_APP_NAME || 'Telemed Tracking'
 
@@ -65,16 +67,18 @@ export default function DashboardPage() {
             </span>
           </div>
 
-          {/* Login button */}
-          <div className="mt-8">
-            <Link
-              to="/login"
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-white text-black hover:bg-white/90 px-6 py-2 text-sm font-medium transition-colors"
-            >
-              <LogIn className="h-4 w-4" />
-              เข้าสู่ระบบ
-            </Link>
-          </div>
+          {/* Login button — hidden when already authenticated */}
+          {!isAuthenticated && (
+            <div className="mt-8">
+              <Link
+                to="/login"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-white text-black hover:bg-white/90 px-6 py-2 text-sm font-medium transition-colors"
+              >
+                <LogIn className="h-4 w-4" />
+                เข้าสู่ระบบ
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 

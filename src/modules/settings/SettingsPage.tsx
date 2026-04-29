@@ -7,31 +7,19 @@ import { AuditLogTable } from './AuditLogTable'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { settingsService, type VerifyReport, type UserDumpRow } from '@/services/settingsService'
-import { maskField } from '@/utils/sensitiveData'
+import { settingsService, type VerifyReport } from '@/services/settingsService'
 import { debug } from '@/utils/debugLogger'
 import { useDebugMount } from '@/hooks/useDebugLog'
 
 export default function SettingsPage() {
   useDebugMount('SettingsPage')
   const [report, setReport] = useState<VerifyReport | null>(null)
-  const [dumpRows, setDumpRows] = useState<UserDumpRow[] | null>(null)
-  const [dumpHeaders, setDumpHeaders] = useState<string[]>([])
   const [debugEnabled, setDebugEnabled] = useState(debug.isEnabled())
 
   const verifyMutation = useMutation({
     mutationFn: () => settingsService.verifySheets(),
     onSuccess: (data) => setReport(data),
     onError: (err) => toast.error('Verification failed', { description: err.message }),
-  })
-
-  const dumpMutation = useMutation({
-    mutationFn: () => settingsService.dumpUsers(),
-    onSuccess: (data) => {
-      setDumpHeaders(data.headers)
-      setDumpRows(data.rows)
-    },
-    onError: (err) => toast.error('Dump failed', { description: err.message }),
   })
 
   useEffect(() => {
@@ -107,45 +95,6 @@ export default function SettingsPage() {
                   )}
                 </div>
               ))}
-            </div>
-          )}
-        </div>
-
-        <div className="rounded-lg border bg-white p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium">ตรวจสอบข้อมูล USERS</h2>
-            <Button size="sm" variant="outline" onClick={() => dumpMutation.mutate()} disabled={dumpMutation.isPending}>
-              {dumpMutation.isPending ? 'กำลังโหลด...' : 'ดูข้อมูลจริง'}
-            </Button>
-          </div>
-          <p className="text-sm text-muted-foreground mb-3">
-            แสดงข้อมูลจริงจาก Sheet USERS เพื่อตรวจสอบว่าข้อมูลอยู่คอลัมน์ถูกต้องหรือไม่ (ซ่อน password hash/salt)
-          </p>
-
-          {dumpRows && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs border-collapse">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="px-2 py-1 text-left font-medium">#</th>
-                    {dumpHeaders.map((h) => (
-                      <th key={h} className="px-2 py-1 text-left font-medium whitespace-nowrap">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {dumpRows.map((r) => (
-                    <tr key={r.row} className="border-b hover:bg-muted/30">
-                      <td className="px-2 py-1 text-muted-foreground">{r.row}</td>
-                      {dumpHeaders.map((h) => (
-                        <td key={h} className="px-2 py-1 whitespace-nowrap max-w-[200px] truncate font-mono">
-                          {maskField(h, r.cells[h])}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
           )}
         </div>
