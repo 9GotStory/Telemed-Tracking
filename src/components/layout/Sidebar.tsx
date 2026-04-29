@@ -18,59 +18,97 @@ interface NavItem {
   external?: boolean
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { to: '/module1', label: 'ทะเบียนอุปกรณ์', icon: <Monitor className="h-4 w-4" />, module: 'module1' },
-  { to: '/module2', label: 'ตรวจสอบความพร้อม', icon: <ClipboardCheck className="h-4 w-4" />, module: 'module2' },
-  { to: '/module3', label: 'ตารางคลินิก', icon: <Calendar className="h-4 w-4" />, module: 'module3' },
-  { to: '/module4', label: 'Import ข้อมูล', icon: <FileUp className="h-4 w-4" />, module: 'module4' },
-  { to: '/module5', label: 'ยืนยันรายการยา', icon: <Pill className="h-4 w-4" />, module: 'module5' },
-  { to: '/module6', label: 'ติดตาม Case', icon: <Phone className="h-4 w-4" />, module: 'module6' },
-  { to: '/master-drugs', label: 'คลังชื่อยา', icon: <Package className="h-4 w-4" />, module: 'master-drugs' },
-  { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" />, module: 'dashboard', external: true },
-  { to: '/users', label: 'จัดการผู้ใช้', icon: <Users className="h-4 w-4" />, module: 'users' },
-  { to: '/settings', label: 'ตั้งค่าระบบ', icon: <Settings className="h-4 w-4" />, module: 'settings' },
+interface NavGroup {
+  label: string
+  items: NavItem[]
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: 'ภาพรวม',
+    items: [
+      { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" />, module: 'dashboard', external: true },
+    ],
+  },
+  {
+    label: 'การให้บริการ',
+    items: [
+      { to: '/module3', label: 'ตารางคลินิก', icon: <Calendar className="h-4 w-4" />, module: 'module3' },
+      { to: '/module4', label: 'นำเข้าข้อมูลผู้ป่วย', icon: <FileUp className="h-4 w-4" />, module: 'module4' },
+      { to: '/module5', label: 'ยืนยันรายการยา', icon: <Pill className="h-4 w-4" />, module: 'module5' },
+      { to: '/module6', label: 'ติดตามผู้ป่วย', icon: <Phone className="h-4 w-4" />, module: 'module6' },
+    ],
+  },
+  {
+    label: 'อุปกรณ์และความพร้อม',
+    items: [
+      { to: '/module1', label: 'ทะเบียนอุปกรณ์', icon: <Monitor className="h-4 w-4" />, module: 'module1' },
+      { to: '/module2', label: 'ตรวจสอบความพร้อม', icon: <ClipboardCheck className="h-4 w-4" />, module: 'module2' },
+    ],
+  },
+  {
+    label: 'จัดการระบบ',
+    items: [
+      { to: '/master-drugs', label: 'คลังชื่อยา', icon: <Package className="h-4 w-4" />, module: 'master-drugs' },
+      { to: '/users', label: 'จัดการผู้ใช้', icon: <Users className="h-4 w-4" />, module: 'users' },
+      { to: '/settings', label: 'ตั้งค่าระบบ', icon: <Settings className="h-4 w-4" />, module: 'settings' },
+    ],
+  },
 ]
 
 function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const { user } = useAuthStore()
 
-  const visibleItems = NAV_ITEMS.filter(
-    (item) => !user || isModuleAllowed(item.module, user.role)
-  )
+  const visibleGroups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter(
+      (item) => !user || isModuleAllowed(item.module, user.role),
+    ),
+  })).filter((group) => group.items.length > 0)
 
   return (
     <nav className="flex flex-col gap-1 p-2">
-      {visibleItems.map((item) => (
-        item.external ? (
-          <a
-            key={item.to}
-            href={item.to}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={onNavigate}
-            className="flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors text-white/80 hover:text-white hover:bg-white/10"
-          >
-            {item.icon}
-            <span>{item.label}</span>
-            <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
-          </a>
-        ) : (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                'text-white/80 hover:text-white hover:bg-white/10',
-                isActive && 'text-white bg-white/10 border-l-2 border-apple-blue'
-              )
-            }
-          >
-            {item.icon}
-            <span>{item.label}</span>
-          </NavLink>
-        )
+      {visibleGroups.map((group, gi) => (
+        <div key={group.label}>
+          {gi > 0 && (
+            <div className="mx-3 my-2 border-t border-white/10" />
+          )}
+          <p className="px-3 pb-1 pt-2 text-[10px] font-medium text-white/40 uppercase tracking-wider">
+            {group.label}
+          </p>
+          {group.items.map((item) => (
+            item.external ? (
+              <a
+                key={item.to}
+                href={item.to}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={onNavigate}
+                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors text-white/80 hover:text-white hover:bg-white/10"
+              >
+                {item.icon}
+                <span>{item.label}</span>
+                <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
+              </a>
+            ) : (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                onClick={onNavigate}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                    'text-white/80 hover:text-white hover:bg-white/10',
+                    isActive && 'text-white bg-white/10 border-l-2 border-apple-blue',
+                  )
+                }
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </NavLink>
+            )
+          ))}
+        </div>
       ))}
     </nav>
   )

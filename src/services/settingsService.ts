@@ -18,35 +18,51 @@ const messageResponseSchema = z.object({
   message: z.string(),
 })
 
+const sheetMismatchSchema = z.object({
+  index: z.number(),
+  expected: z.string(),
+  actual: z.string(),
+})
+
+const sheetVerifyResultSchema = z.object({
+  ok: z.boolean(),
+  expected: z.array(z.string()),
+  actual: z.array(z.string()),
+  mismatches: z.array(sheetMismatchSchema),
+  error: z.string().optional(),
+})
+
+const verifyReportSchema = z.object({
+  ok: z.boolean(),
+  sheets: z.record(sheetVerifyResultSchema),
+})
+
+const userDumpRowSchema = z.object({
+  row: z.number(),
+  cells: z.record(z.string()),
+})
+
+const dumpUsersResponseSchema = z.object({
+  headers: z.array(z.string()),
+  rows: z.array(userDumpRowSchema),
+})
+
 // ---------------------------------------------------------------------------
 // Exported Types
 // ---------------------------------------------------------------------------
 
 export type SettingsEntry = z.infer<typeof settingsEntrySchema>
+export type SheetMismatch = z.infer<typeof sheetMismatchSchema>
+export type SheetVerifyResult = z.infer<typeof sheetVerifyResultSchema>
+export type VerifyReport = z.infer<typeof verifyReportSchema>
+export type UserDumpRow = z.infer<typeof userDumpRowSchema>
 
 export interface SettingsSaveData {
   settings: SettingsEntry[]
   telegram_test?: boolean
 }
 
-export interface SheetMismatch {
-  index: number
-  expected: string
-  actual: string
-}
-
-export interface SheetVerifyResult {
-  ok: boolean
-  expected: string[]
-  actual: string[]
-  mismatches: SheetMismatch[]
-  error?: string
-}
-
-export interface VerifyReport {
-  ok: boolean
-  sheets: Record<string, SheetVerifyResult>
-}
+export { dumpUsersResponseSchema }
 
 // ---------------------------------------------------------------------------
 // GAS Actions (T120)
@@ -68,6 +84,12 @@ export const settingsService = {
   /** Verify all sheet headers match expected column definitions (super_admin only) */
   async verifySheets(): Promise<VerifyReport> {
     const raw = await gasPost<unknown>('system.verify')
-    return raw as VerifyReport
+    return verifyReportSchema.parse(raw)
+  },
+
+  /** Dump raw USERS sheet data for admin inspection (super_admin only) */
+  async dumpUsers(): Promise<{ headers: string[]; rows: UserDumpRow[] }> {
+    const raw = await gasPost<unknown>('system.dumpUsers')
+    return dumpUsersResponseSchema.parse(raw)
   },
 }

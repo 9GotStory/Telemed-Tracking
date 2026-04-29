@@ -1,28 +1,38 @@
 import { useState, useEffect } from 'react'
+import { useMutation } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { TelegramSettings } from './TelegramSettings'
 import { AuditLogTable } from './AuditLogTable'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { settingsService, type VerifyReport } from '@/services/settingsService'
-import { gasPost } from '@/services/api'
+import { settingsService, type VerifyReport, type UserDumpRow } from '@/services/settingsService'
+import { maskField } from '@/utils/sensitiveData'
 import { debug } from '@/utils/debugLogger'
 import { useDebugMount } from '@/hooks/useDebugLog'
-
-interface UserDumpRow {
-  row: number
-  cells: Record<string, string>
-}
 
 export default function SettingsPage() {
   useDebugMount('SettingsPage')
   const [report, setReport] = useState<VerifyReport | null>(null)
   const [dumpRows, setDumpRows] = useState<UserDumpRow[] | null>(null)
   const [dumpHeaders, setDumpHeaders] = useState<string[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
   const [debugEnabled, setDebugEnabled] = useState(debug.isEnabled())
+
+  const verifyMutation = useMutation({
+    mutationFn: () => settingsService.verifySheets(),
+    onSuccess: (data) => setReport(data),
+    onError: (err) => toast.error('Verification failed', { description: err.message }),
+  })
+
+  const dumpMutation = useMutation({
+    mutationFn: () => settingsService.dumpUsers(),
+    onSuccess: (data) => {
+      setDumpHeaders(data.headers)
+      setDumpRows(data.rows)
+    },
+    onError: (err) => toast.error('Dump failed', { description: err.message }),
+  })
 
   useEffect(() => {
     const handler = (e: StorageEvent) => {
@@ -33,42 +43,6 @@ export default function SettingsPage() {
     window.addEventListener('storage', handler)
     return () => window.removeEventListener('storage', handler)
   }, [])
-
-  const handleVerify = async () => {
-    setLoading(true)
-    setError('')
-    try {
-      const result = await settingsService.verifySheets()
-      setReport(result)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Verification failed')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleDump = async () => {
-    setLoading(true)
-    setError('')
-    setDumpRows(null)
-    try {
-      const raw = await gasPost<unknown>('system.dumpUsers')
-      const data = raw as { headers: string[]; rows: UserDumpRow[] }
-      setDumpHeaders(data.headers)
-      setDumpRows(data.rows)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Dump failed')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Mask sensitive fields for display
-  const mask = (key: string, val: string) => {
-    if (['password_hash', 'password_salt'].includes(key)) return val ? '***' : ''
-    if (key === 'session_token' && val) return val.substring(0, 8) + '...'
-    return val
-  }
 
   return (
     <PageWrapper>
@@ -88,16 +62,16 @@ export default function SettingsPage() {
         <div className="rounded-lg border bg-white p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium">ตรวจสอบโครงสร้าง Sheet</h2>
-            <Button size="sm" variant="outline" onClick={handleVerify} disabled={loading}>
-              {loading ? 'กำลังตรวจสอบ...' : 'ตรวจสอบ'}
+            <Button size="sm" variant="outline" onClick={() => verifyMutation.mutate()} disabled={verifyMutation.isPending}>
+              {verifyMutation.isPending ? 'กำลังตรวจสอบ...' : 'ตรวจสอบ'}
             </Button>
           </div>
           <p className="text-sm text-muted-foreground mb-3">
             ตรวจสอบว่า header ของ Google Sheet ตรงกับโครงสร้างที่ระบบคาดหวัง — ช่วยป้องกันปัญหาข้อมูลเลื่อนคอลัมน์
           </p>
 
-          {error && (
-            <p className="text-sm text-destructive mb-3">{error}</p>
+          {verifyMutation.isError && (
+            <p className="text-sm text-destructive mb-3">{verifyMutation.error.message}</p>
           )}
 
           {report && (
@@ -140,8 +114,8 @@ export default function SettingsPage() {
         <div className="rounded-lg border bg-white p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium">ตรวจสอบข้อมูล USERS</h2>
-            <Button size="sm" variant="outline" onClick={handleDump} disabled={loading}>
-              {loading ? 'กำลังโหลด...' : 'ดูข้อมูลจริง'}
+            <Button size="sm" variant="outline" onClick={() => dumpMutation.mutate()} disabled={dumpMutation.isPending}>
+              {dumpMutation.isPending ? 'กำลังโหลด...' : 'ดูข้อมูลจริง'}
             </Button>
           </div>
           <p className="text-sm text-muted-foreground mb-3">
@@ -165,7 +139,7 @@ export default function SettingsPage() {
                       <td className="px-2 py-1 text-muted-foreground">{r.row}</td>
                       {dumpHeaders.map((h) => (
                         <td key={h} className="px-2 py-1 whitespace-nowrap max-w-[200px] truncate font-mono">
-                          {mask(h, r.cells[h])}
+                          {maskField(h, r.cells[h])}
                         </td>
                       ))}
                     </tr>

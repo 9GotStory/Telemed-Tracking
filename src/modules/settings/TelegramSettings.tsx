@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { useSettingsGet, useSettingsSave } from './useSettings'
 
 const telegramSchema = z.object({
@@ -46,7 +47,7 @@ export function TelegramSettings() {
     telegram_active: settingsMap.telegram_active ?? DEFAULTS.telegram_active,
   }
 
-  const { register, handleSubmit, getValues, formState: { errors } } = useForm<TelegramFormValues>({
+  const { register, handleSubmit, getValues, setValue, watch, formState: { errors } } = useForm<TelegramFormValues>({
     resolver: zodResolver(telegramSchema),
     defaultValues: formValues,
     values: formValues,
@@ -133,13 +134,10 @@ export function TelegramSettings() {
       </div>
 
       <div className="flex items-center gap-2">
-        <input
+        <Switch
           id="telegram_active"
-          type="checkbox"
-          className="h-4 w-4 rounded border-gray-300"
-          defaultChecked={settingsMap.telegram_active === 'Y'}
-          {...register('telegram_active')}
-          value="Y"
+          checked={watch('telegram_active') === 'Y'}
+          onCheckedChange={(checked) => setValue('telegram_active', checked ? 'Y' : 'N', { shouldDirty: true })}
         />
         <Label htmlFor="telegram_active">เปิดใช้งานแจ้งเตือน Telegram</Label>
       </div>

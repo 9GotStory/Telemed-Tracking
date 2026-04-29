@@ -5,8 +5,14 @@ import {
   Activity,
   ArrowLeft,
   Building2,
+  Database,
+  Eye,
+  FileText,
   Heart,
+  Lock,
   MonitorSmartphone,
+  Scale,
+  Server,
   ShieldCheck,
   Stethoscope,
   Users,
@@ -136,11 +142,10 @@ export default function AboutPage() {
                 <div className="rounded-lg bg-white p-5 shadow-[0_3px_15px_rgba(0,0,0,0.08)]">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="inline-flex items-center justify-center rounded-full bg-[#0071e3]/10 px-2.5 py-0.5 text-xs font-semibold text-[#0071e3]">
-                      รพ.สอง
+                      รพ.
                     </span>
                   </div>
                   <span className="text-sm font-medium text-[#1d1d1f]">{mainHosp.hosp_name}</span>
-                  <span className="text-xs text-[rgba(0,0,0,0.48)] ml-2">({mainHosp.hosp_code})</span>
                 </div>
               )}
 
@@ -160,9 +165,6 @@ export default function AboutPage() {
                       <div key={h.hosp_code} className="flex items-center gap-2 py-1">
                         <MonitorSmartphone className="h-3.5 w-3.5 text-[rgba(0,0,0,0.48)] shrink-0" />
                         <span className="text-sm text-[#1d1d1f]">{h.hosp_name}</span>
-                        {h.hosp_type === 'สสช.' && (
-                          <span className="text-xs text-[rgba(0,0,0,0.48)]">(สสช.)</span>
-                        )}
                       </div>
                     ))}
                   </div>
@@ -175,10 +177,9 @@ export default function AboutPage() {
                   {ssoList.map((h) => (
                     <div key={h.hosp_code}>
                       <span className="inline-flex items-center justify-center rounded-full bg-[#0071e3]/10 px-2.5 py-0.5 text-xs font-semibold text-[#0071e3]">
-                        สสอ.สอง
+                        สสอ.
                       </span>
                       <span className="text-sm font-medium text-[#1d1d1f] ml-2">{h.hosp_name}</span>
-                      <span className="text-xs text-[rgba(0,0,0,0.48)] ml-2">({h.hosp_code})</span>
                     </div>
                   ))}
                 </div>
@@ -202,6 +203,232 @@ export default function AboutPage() {
                 <p className="text-xs text-[#0071e3] font-medium mt-0.5">นักวิชาการคอมพิวเตอร์</p>
                 <p className="text-xs text-[rgba(0,0,0,0.48)] mt-1 leading-relaxed">
                   พัฒนาและออกแบบระบบติดตามการดำเนินงาน Telemedicine
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* แจ้งเกี่ยวกับข้อมูลส่วนบุคคล */}
+        <section>
+          <h2 className="text-2xl font-semibold text-[#1d1d1f] mb-4 tracking-tight">
+            แจ้งเกี่ยวกับข้อมูลส่วนบุคคล (Privacy Notice)
+          </h2>
+          <div className="rounded-lg bg-white p-6 shadow-[0_3px_15px_rgba(0,0,0,0.08)]">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0071e3]/10">
+                <Eye className="h-4 w-4 text-[#0071e3]" />
+              </div>
+              <span className="text-sm font-medium text-[#1d1d1f]">ภาพรวม</span>
+            </div>
+            <p className="text-[rgba(0,0,0,0.8)] leading-relaxed">
+              {appName} เก็บรวบรวมข้อมูลส่วนบุคคลเพียงเท่าที่จำเป็นต่อการดำเนินงาน
+              ติดตามและกำกับดูแลการให้บริการ Telemedicine
+              ของสถานพยาบาลในเขตพื้นที่อำเภอสอง จังหวัดแพร่
+            </p>
+            <div className="mt-5 space-y-4">
+              <div className="flex gap-3">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#0071e3]/10 shrink-0 mt-0.5">
+                  <Database className="h-3.5 w-3.5 text-[#0071e3]" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-[#1d1d1f]">ข้อมูลที่เก็บรวบรวม</h4>
+                  <p className="text-xs text-[rgba(0,0,0,0.48)] mt-1 leading-relaxed">
+                    ข้อมูลผู้ป่วย (ชื่อ-สกุล, HN, VN, เบอร์โทรศัพท์) ที่จำเป็นต่อการติดตามการให้บริการ,
+                    ข้อมูลผู้ใช้งานระบบ (ชื่อ, ชื่อผู้ใช้, รหัสผ่านที่เข้ารหัสแล้ว, รหัสสถานพยาบาล),
+                    และข้อมูลการดำเนินงาน (สถานะอุปกรณ์, ตารางนัดหมาย, รายการยา)
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#0071e3]/10 shrink-0 mt-0.5">
+                  <Server className="h-3.5 w-3.5 text-[#0071e3]" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-[#1d1d1f]">การจัดเก็บข้อมูล</h4>
+                  <p className="text-xs text-[rgba(0,0,0,0.48)] mt-1 leading-relaxed">
+                    ข้อมูลจัดเก็บในระบบ Google Sheets ภายใต้บัญชีของสำนักงานสาธารณสุขอำเภอสอง
+                    โดยมีระบบควบคุมการเข้าถึงตามบทบาทหน้าที่ (Role-Based Access Control)
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#0071e3]/10 shrink-0 mt-0.5">
+                  <Lock className="h-3.5 w-3.5 text-[#0071e3]" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-[#1d1d1f]">การรักษาความปลอดภัย</h4>
+                  <p className="text-xs text-[rgba(0,0,0,0.48)] mt-1 leading-relaxed">
+                    รหัสผ่านเข้ารหัสด้วยวิธีการแฮช (Hash) ก่อนจัดเก็บ,
+                    Session Token จัดเก็บในหน่วยความจำชั่วคราวของเบราว์เซอร์เท่านั้น (Session Storage)
+                    และมีอายุการใช้งาน 8 ชั่วโมง,
+                    ข้อมูลผู้ป่วยเข้าถึงได้เฉพาะผู้ที่ได้รับอนุญาตตามบทบาทเท่านั้น
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* นโยบายความเป็นส่วนตัว */}
+        <section>
+          <h2 className="text-2xl font-semibold text-[#1d1d1f] mb-4 tracking-tight">
+            นโยบายความเป็นส่วนตัว (Privacy Policy)
+          </h2>
+          <div className="rounded-lg bg-white p-6 shadow-[0_3px_15px_rgba(0,0,0,0.08)]">
+            <div className="flex items-center gap-2 mb-5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0071e3]/10">
+                <FileText className="h-4 w-4 text-[#0071e3]" />
+              </div>
+              <span className="text-sm font-medium text-[#1d1d1f]">
+                ปรับปรุงล่าสุด: เมษายน 2569
+              </span>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <h4 className="text-sm font-semibold text-[#1d1d1f] mb-2">1. วัตถุประสงค์</h4>
+                <p className="text-xs text-[rgba(0,0,0,0.8)] leading-relaxed">
+                  นโยบายฉบับนี้อธิบายถึงวิธีการที่ {appName}
+                  เก็บรวบรวม ใช้ และปกป้องข้อมูลส่วนบุคคลของผู้ใช้งานและผู้ป่วย
+                  โดยมีวัตถุประสงค์เพื่อให้การดำเนินงาน Telemedicine
+                  เป็นไปอย่างมีประสิทธิภาพและปลอดภัย
+                </p>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold text-[#1d1d1f] mb-2">
+                  2. ประเภทข้อมูลที่เก็บรวบรวม
+                </h4>
+                <ul className="text-xs text-[rgba(0,0,0,0.8)] leading-relaxed space-y-1.5">
+                  <li className="flex gap-2">
+                    <span className="text-[rgba(0,0,0,0.48)]">&#8226;</span>
+                    <span><strong>ข้อมูลผู้ใช้งานระบบ:</strong> ชื่อ-สกุล, ชื่อผู้ใช้, รหัสผ่าน (เข้ารหัสแล้ว), รหัสสถานพยาบาล, บทบาทหน้าที่</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-[rgba(0,0,0,0.48)]">&#8226;</span>
+                    <span><strong>ข้อมูลผู้ป่วย:</strong> ชื่อ-สกุล, HN, VN, เบอร์โทรศัพท์, สถานะการรับบริการ, รายการยา, ผลการติดตาม</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-[rgba(0,0,0,0.48)]">&#8226;</span>
+                    <span><strong>ข้อมูลการดำเนินงาน:</strong> สถานะอุปกรณ์, ตารางนัดหมาย, คลินิก, ผลการตรวจสอบความพร้อม</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold text-[#1d1d1f] mb-2">
+                  3. วัตถุประสงค์การใช้ข้อมูล
+                </h4>
+                <ul className="text-xs text-[rgba(0,0,0,0.8)] leading-relaxed space-y-1.5">
+                  <li className="flex gap-2">
+                    <span className="text-[rgba(0,0,0,0.48)]">&#8226;</span>
+                    <span>ติดตามและกำกับดูแลการดำเนินงาน Telemedicine ของสถานพยาบาลในเขตพื้นที่</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-[rgba(0,0,0,0.48)]">&#8226;</span>
+                    <span>จัดการตารางนัดหมายและติดตามการให้บริการผู้ป่วย</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-[rgba(0,0,0,0.48)]">&#8226;</span>
+                    <span>ตรวจสอบสถานะความพร้อมของอุปกรณ์และระบบ</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-[rgba(0,0,0,0.48)]">&#8226;</span>
+                    <span>ติดตามสภาวะผู้ป่วยหลังการให้บริการ</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-[rgba(0,0,0,0.48)]">&#8226;</span>
+                    <span>จัดทำรายงานสถิติเพื่อการบริหารจัดการ</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold text-[#1d1d1f] mb-2">4. การเปิดเผยข้อมูล</h4>
+                <p className="text-xs text-[rgba(0,0,0,0.8)] leading-relaxed">
+                  ระบบไม่เปิดเผยข้อมูลส่วนบุคคลแก่บุคคลภายนอก
+                  ยกเว้นเจ้าหน้าที่ที่ได้รับมอบหมายในสถานพยาบาลที่เกี่ยวข้องเท่านั้น
+                  โดยมีระบบควบคุมการเข้าถึงตามบทบาทหน้าที่ดังนี้
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+                  <div className="rounded-md bg-[rgba(0,0,0,0.03)] px-3 py-2 text-xs text-[rgba(0,0,0,0.8)] leading-relaxed">
+                    <span className="font-medium">สาธารณะ (Dashboard):</span> เห็นเฉพาะข้อมูลสถิติรวม ไม่มีข้อมูลส่วนบุคคล
+                  </div>
+                  <div className="rounded-md bg-[rgba(0,0,0,0.03)] px-3 py-2 text-xs text-[rgba(0,0,0,0.8)] leading-relaxed">
+                    <span className="font-medium">รพ.สต.:</span> เห็นเฉพาะข้อมูลของสถานพยาบาลตนเอง
+                  </div>
+                  <div className="rounded-md bg-[rgba(0,0,0,0.03)] px-3 py-2 text-xs text-[rgba(0,0,0,0.8)] leading-relaxed">
+                    <span className="font-medium">รพ.สอง:</span> เห็นข้อมูลทุกสถานพยาบาลในเขตพื้นที่
+                  </div>
+                  <div className="rounded-md bg-[rgba(0,0,0,0.03)] px-3 py-2 text-xs text-[rgba(0,0,0,0.8)] leading-relaxed">
+                    <span className="font-medium">ผู้ดูแลระบบ:</span> จัดการผู้ใช้งานและตั้งค่าระบบ
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold text-[#1d1d1f] mb-2">
+                  5. มาตรการรักษาความปลอดภัย
+                </h4>
+                <ul className="text-xs text-[rgba(0,0,0,0.8)] leading-relaxed space-y-1.5">
+                  <li className="flex gap-2">
+                    <span className="text-[rgba(0,0,0,0.48)]">&#8226;</span>
+                    <span>รหัสผ่านถูกแปลงเป็น Hash ก่อนจัดเก็บ ไม่เก็บรหัสผ่านแบบข้อความเขียนตรง (Plaintext)</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-[rgba(0,0,0,0.48)]">&#8226;</span>
+                    <span>Session Token จัดเก็บในหน่วยความจำชั่วคราวของเบราว์เซอร์เท่านั้น (Session Storage) ไม่จัดเก็บใน Local Storage หรือ Cookie</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-[rgba(0,0,0,0.48)]">&#8226;</span>
+                    <span>Session มีอายุการใช้งาน 8 ชั่วโมง และถูกลบทันทีเมื่อออกจากระบบ</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-[rgba(0,0,0,0.48)]">&#8226;</span>
+                    <span>การสื่อสารระหว่างเบราว์เซอร์กับเซิร์ฟเวอร์ผ่าน HTTPS (SSL/TLS)</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold text-[#1d1d1f] mb-2">
+                  6. สิทธิของเจ้าของข้อมูล
+                </h4>
+                <p className="text-xs text-[rgba(0,0,0,0.8)] leading-relaxed">
+                  ตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (PDPA)
+                  เจ้าของข้อมูลมีสิทธิเข้าถึง แก้ไข หรือขอให้ลบข้อมูลส่วนบุคคลของตน
+                  สามารถติดต่อได้ที่สำนักงานสาธารณสุขอำเภอสอง จังหวัดแพร่
+                </p>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold text-[#1d1d1f] mb-2">
+                  7. ระยะเวลาการเก็บรักษาข้อมูล
+                </h4>
+                <p className="text-xs text-[rgba(0,0,0,0.8)] leading-relaxed">
+                  ข้อมูลจัดเก็บตามระยะเวลาที่จำเป็นต่อการดำเนินงานและตามที่กฎหมายกำหนด
+                  โดยข้อมูลผู้ป่วยจะถูกเก็บรักษาตามระยะเวลาที่กฎหมายว่าด้วยการเก็บรักษาเวชระเบียนกำหนด
+                </p>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold text-[#1d1d1f] mb-2">
+                  8. ช่องทางการติดต่อ
+                </h4>
+                <p className="text-xs text-[rgba(0,0,0,0.8)] leading-relaxed">
+                  หากมีข้อสงสัยเกี่ยวกับนโยบายความเป็นส่วนตัวหรือการคุ้มครองข้อมูลส่วนบุคคล
+                  สามารถติดต่อสำนักงานสาธารณสุขอำเภอสอง จังหวัดแพร่
+                  หรือผู้พัฒนาระบบได้โดยตรง
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-[rgba(0,0,0,0.06)]">
+              <div className="flex items-center gap-2">
+                <Scale className="h-3.5 w-3.5 text-[rgba(0,0,0,0.48)]" />
+                <p className="text-xs text-[rgba(0,0,0,0.48)]">
+                  อ้างอิง: พระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (PDPA)
                 </p>
               </div>
             </div>

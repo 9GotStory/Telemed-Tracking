@@ -6,9 +6,9 @@ const auditLogItemSchema = z.object({
   user_id: z.string(),
   action: z.string(),
   module: z.string(),
-  target_id: z.string(),
-  old_value: z.string(),
-  new_value: z.string(),
+  target_id: z.string().nullable().default(''),
+  old_value: z.string().nullable().default(''),
+  new_value: z.string().nullable().default(''),
   created_at: z.string(),
 })
 
