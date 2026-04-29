@@ -1,8 +1,17 @@
 import type { UpcomingAppointment } from '@/services/dashboardService'
 import { formatBuddhist } from '@/utils/dateUtils'
+import { isBefore, startOfDay, parseISO } from 'date-fns'
 
 interface UpcomingAppointmentsProps {
   appointments: UpcomingAppointment[]
+}
+
+function isPastDate(dateStr: string): boolean {
+  try {
+    return isBefore(startOfDay(parseISO(dateStr)), startOfDay(new Date()))
+  } catch {
+    return false
+  }
 }
 
 export function UpcomingAppointments({ appointments }: UpcomingAppointmentsProps) {
@@ -27,20 +36,28 @@ export function UpcomingAppointments({ appointments }: UpcomingAppointmentsProps
           </tr>
         </thead>
         <tbody>
-          {appointments.map((appt, i) => (
-            <tr key={i} className="border-b border-[rgba(0,0,0,0.06)] last:border-0">
-              <td className="py-3 pr-4 text-[#1d1d1f] font-medium">
-                {formatBuddhist(appt.service_date)}
-              </td>
-              <td className="py-3 pr-4 text-[#1d1d1f]">{appt.hosp_name}</td>
-              <td className="py-3 pr-4 text-[rgba(0,0,0,0.48)]">{appt.service_time || '-'}</td>
-              <td className="py-3 text-right">
-                <span className="inline-flex items-center justify-center rounded-full bg-[#0071e3]/10 px-2.5 py-0.5 text-xs font-semibold text-[#0071e3]">
-                  {appt.appoint_count}
-                </span>
-              </td>
-            </tr>
-          ))}
+          {appointments.map((appt, i) => {
+            const past = isPastDate(appt.service_date)
+            const rowClass = past ? 'opacity-45' : ''
+            const badgeClass = past
+              ? 'bg-[rgba(0,0,0,0.06)] text-[rgba(0,0,0,0.32)]'
+              : 'bg-[#0071e3]/10 text-[#0071e3]'
+
+            return (
+              <tr key={i} className={`border-b border-[rgba(0,0,0,0.06)] last:border-0 ${rowClass}`}>
+                <td className="py-3 pr-4 text-[#1d1d1f] font-medium">
+                  {formatBuddhist(appt.service_date)}
+                </td>
+                <td className="py-3 pr-4 text-[#1d1d1f]">{appt.hosp_name}</td>
+                <td className="py-3 pr-4 text-[rgba(0,0,0,0.48)]">{appt.service_time || '-'}</td>
+                <td className="py-3 text-right">
+                  <span className={`inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${badgeClass}`}>
+                    {appt.appoint_count}
+                  </span>
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>

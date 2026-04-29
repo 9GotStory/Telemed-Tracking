@@ -2118,7 +2118,6 @@ function handleMasterDrugImport(user, data) {
     existingKeys[drugKey] = true;
     imported++;
   }
-  }
 
   // H1: Batch insert all new rows in a single setValues call
   if (newRows.length > 0) {
