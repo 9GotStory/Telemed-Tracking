@@ -19,6 +19,9 @@ import FollowupPage from '@/modules/module6/FollowupPage'
 import UsersPage from '@/modules/users/UsersPage'
 import SettingsPage from '@/modules/settings/SettingsPage'
 
+// Strip trailing slash: '/' → '' (dev), '/Telemed-Tracking/' → '/Telemed-Tracking' (prod)
+const basename = import.meta.env.BASE_URL.replace(/\/$/, '')
+
 export const router = createBrowserRouter([
   // Public routes (no auth)
   {
@@ -131,4 +134,4 @@ export const router = createBrowserRouter([
       { path: '*', element: <LoginPage /> },
     ],
   },
-])
+], { basename })
