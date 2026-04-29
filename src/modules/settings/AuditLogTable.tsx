@@ -152,7 +152,16 @@ export function AuditLogTable() {
               <tr
                 key={log.log_id}
                 className="border-b hover:bg-muted/30 cursor-pointer"
+                tabIndex={0}
+                role="button"
+                aria-label={`ดูรายละเอียด ${log.action} ${log.module}`}
                 onClick={() => setSelectedLog(log)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setSelectedLog(log)
+                  }
+                }}
               >
                 <td className="py-2 pr-3 text-muted-foreground whitespace-nowrap">
                   {formatTimestamp(log.created_at)}

@@ -93,7 +93,7 @@ export function TelegramSettings() {
             {...register('bot_token')}
           />
           {errors.bot_token && (
-            <p className="text-xs text-destructive">{errors.bot_token.message}</p>
+            <p role="alert" className="text-xs text-destructive">{errors.bot_token.message}</p>
           )}
         </div>
 
@@ -105,7 +105,7 @@ export function TelegramSettings() {
             {...register('chat_id')}
           />
           {errors.chat_id && (
-            <p className="text-xs text-destructive">{errors.chat_id.message}</p>
+            <p role="alert" className="text-xs text-destructive">{errors.chat_id.message}</p>
           )}
         </div>
 
@@ -117,7 +117,7 @@ export function TelegramSettings() {
             {...register('alert_time')}
           />
           {errors.alert_time && (
-            <p className="text-xs text-destructive">{errors.alert_time.message}</p>
+            <p role="alert" className="text-xs text-destructive">{errors.alert_time.message}</p>
           )}
         </div>
 
@@ -128,7 +128,7 @@ export function TelegramSettings() {
             {...register('system_name')}
           />
           {errors.system_name && (
-            <p className="text-xs text-destructive">{errors.system_name.message}</p>
+            <p role="alert" className="text-xs text-destructive">{errors.system_name.message}</p>
           )}
         </div>
       </div>

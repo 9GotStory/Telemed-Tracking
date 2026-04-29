@@ -1,0 +1,51 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_GAS_API_URL: ${{ secrets.VITE_GAS_API_URL }}
+          VITE_APP_URL: ${{ vars.VITE_APP_URL || 'https://9gotstory.github.io/Telemed-Tracking' }}
+          VITE_APP_NAME: ${{ vars.VITE_APP_NAME || 'Telemed Tracking คปสอ.สอง' }}
+          VITE_DASHBOARD_PATH: ${{ vars.VITE_DASHBOARD_PATH || '/dashboard' }}
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

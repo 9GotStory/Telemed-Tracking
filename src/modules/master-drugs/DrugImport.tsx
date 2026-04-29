@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -110,6 +111,9 @@ export function DrugImport({ open, onClose }: DrugImportProps) {
           <DialogTitle>
             {importResult ? 'ผลการนำเข้า' : 'นำเข้ารายการยา'}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            นำเข้ารายการยาจากไฟล์ Excel
+          </DialogDescription>
         </DialogHeader>
 
         {/* Import result view */}

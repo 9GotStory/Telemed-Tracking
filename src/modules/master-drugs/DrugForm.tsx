@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -77,6 +78,9 @@ export function DrugForm({ open, onOpenChange, drug }: DrugFormProps) {
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'แก้ไขยา' : 'เพิ่มยา'}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {isEditing ? 'แบบฟอร์มแก้ไขข้อมูลยา' : 'แบบฟอร์มเพิ่มยาใหม่ในระบบ'}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit as (data: DrugFormValues) => void)} className="grid gap-4">
           {/* Drug Name */}
