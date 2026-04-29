@@ -132,7 +132,7 @@ export function FollowupForm({ vn, editRecord, onCancelEdit, onSuccess }: Follow
       <div className="grid gap-1.5">
         <Label>การรับประทานยา</Label>
         <Select
-          value={watch('drug_adherence') || 'ไม่ได้ระบุ'}
+          value={watch('drug_adherence') ?? 'ไม่ได้ระบุ'}
           onValueChange={(v) => setValue('drug_adherence', v === 'ไม่ได้ระบุ' ? '' : v, { shouldValidate: true })}
         >
           <SelectTrigger className="w-full">
