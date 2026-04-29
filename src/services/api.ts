@@ -26,7 +26,7 @@ function extractError(data: unknown): string {
 }
 
 /**
- * Handle unauthorized response — clear auth state and redirect to login.
+ * Handle unauthorized response — clear auth state and redirect to dashboard.
  * Called when GAS returns "Unauthorized" error or session expired.
  */
 function handleUnauthorized(): void {
@@ -36,7 +36,7 @@ function handleUnauthorized(): void {
     // Intentional full-page reload: clears all React state, TanStack Query cache,
     // and Zustand store to guarantee no stale data from the expired session persists.
     // This differs from useLogout which uses SPA navigation for intentional logouts.
-    window.location.href = '/login'
+    window.location.href = import.meta.env.BASE_URL
   }
 }
 

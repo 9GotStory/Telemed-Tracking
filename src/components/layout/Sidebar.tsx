@@ -1,13 +1,14 @@
 import { NavLink } from 'react-router-dom'
 import {
   Monitor, ClipboardCheck, Calendar, FileUp, Pill, Phone,
-  Package, LayoutDashboard, Users, Settings, LogOut, ExternalLink,
+  Package, LayoutDashboard, Users, Settings, LogOut,
 } from 'lucide-react'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/stores/authStore'
 import { useUIStore } from '@/stores/uiStore'
 import { isModuleAllowed } from '@/utils/roleGuard'
+import { useLogout } from '@/hooks/useAuth'
 import { cn } from '@/lib/utils'
 
 interface NavItem {
@@ -15,7 +16,6 @@ interface NavItem {
   label: string
   icon: React.ReactNode
   module: string
-  external?: boolean
 }
 
 interface NavGroup {
@@ -27,7 +27,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'ภาพรวม',
     items: [
-      { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" />, module: 'dashboard', external: true },
+      { to: '/', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" />, module: 'dashboard' },
     ],
   },
   {
@@ -77,36 +77,22 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
             {group.label}
           </p>
           {group.items.map((item) => (
-            item.external ? (
-              <a
-                key={item.to}
-                href={item.to}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={onNavigate}
-                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors text-white/80 hover:text-white hover:bg-white/10"
-              >
-                {item.icon}
-                <span>{item.label}</span>
-                <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
-              </a>
-            ) : (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                onClick={onNavigate}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                    'text-white/80 hover:text-white hover:bg-white/10',
-                    isActive && 'text-white bg-white/10 border-l-2 border-apple-blue',
-                  )
-                }
-              >
-                {item.icon}
-                <span>{item.label}</span>
-              </NavLink>
-            )
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === '/'}
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                  'text-white/80 hover:text-white hover:bg-white/10',
+                  isActive && 'text-white bg-white/10 border-l-2 border-apple-blue',
+                )
+              }
+            >
+              {item.icon}
+              <span>{item.label}</span>
+            </NavLink>
           ))}
         </div>
       ))}
@@ -115,8 +101,14 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 export function Sidebar() {
-  const { user, clearAuth } = useAuthStore()
+  const { user } = useAuthStore()
+  const logout = useLogout()
   const { sidebarOpen, setSidebarOpen } = useUIStore()
+
+  const handleLogout = () => {
+    setSidebarOpen(false)
+    logout.mutate()
+  }
 
   return (
     <>
@@ -138,7 +130,8 @@ export function Sidebar() {
               variant="ghost"
               size="sm"
               className="mt-2 text-white/60 hover:text-white hover:bg-white/10 w-full justify-start"
-              onClick={clearAuth}
+              onClick={handleLogout}
+              disabled={logout.isPending}
             >
               <LogOut className="h-4 w-4 mr-2" />
               ออกจากระบบ
@@ -163,7 +156,8 @@ export function Sidebar() {
                 variant="ghost"
                 size="sm"
                 className="mt-2 text-white/60 hover:text-white hover:bg-white/10 w-full justify-start"
-                onClick={() => { clearAuth(); setSidebarOpen(false) }}
+                onClick={handleLogout}
+                disabled={logout.isPending}
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 ออกจากระบบ

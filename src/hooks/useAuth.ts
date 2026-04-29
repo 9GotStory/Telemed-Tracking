@@ -58,7 +58,7 @@ export function useRegister() {
 }
 
 /**
- * Logout mutation — calls authService.logout, clears session, redirects to login.
+ * Logout mutation — calls authService.logout, clears session, redirects to dashboard.
  * Always clears local state even if the API call fails.
  */
 export function useLogout() {
@@ -70,7 +70,7 @@ export function useLogout() {
     onSettled: () => {
       clearAuth()
       toast.success('ออกจากระบบสำเร็จ')
-      navigate('/login', { replace: true })
+      navigate('/', { replace: true })
     },
   })
 }

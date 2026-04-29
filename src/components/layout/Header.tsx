@@ -2,6 +2,7 @@ import { Menu, LogOut, ChevronRight } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/stores/authStore'
+import { useLogout } from '@/hooks/useAuth'
 import { useUIStore } from '@/stores/uiStore'
 
 const ROUTE_LABELS: Record<string, string> = {
@@ -17,7 +18,8 @@ const ROUTE_LABELS: Record<string, string> = {
 }
 
 export function Header() {
-  const { user, clearAuth } = useAuthStore()
+  const { user } = useAuthStore()
+  const logout = useLogout()
   const { toggleSidebar } = useUIStore()
   const location = useLocation()
 
@@ -58,7 +60,8 @@ export function Header() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={clearAuth}
+              onClick={() => logout.mutate()}
+              disabled={logout.isPending}
               title="ออกจากระบบ"
             >
               <LogOut className="h-4 w-4" />
