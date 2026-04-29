@@ -875,6 +875,24 @@ function handleRegister(data) {
   ensureTextFormat("USERS", userNewRow);
   usersSheet.getRange(userNewRow, 1, 1, newRow.length).setValues([newRow]);
 
+  // --- Immediate Telegram notification for new user registration ---
+  try {
+    var regSettings = getSettingsMap();
+    if (regSettings.notify_new_user === "Y" && regSettings.bot_token && regSettings.chat_id) {
+      var regSystemName = regSettings.system_name || "Telemed Tracking";
+      var regMessage = "<b>" + regSystemName + "</b>\n";
+      regMessage += "ผู้ใช้ใหม่ลงทะเบียน\n\n";
+      regMessage += "ชื่อผู้ใช้: " + username + "\n";
+      regMessage += "รหัส รพ.: " + hospCode + "\n";
+      regMessage += "ชื่อ: " + firstName + " " + lastName + "\n";
+      regMessage += "เบอร์โทร: " + tel + "\n";
+      regMessage += "สถานะ: " + (autoApprove ? "อนุมัติอัตโนมัติ (super_admin)" : "รออนุมัติ");
+      sendTelegramMessage(regSettings, regMessage);
+    }
+  } catch (notifyErr) {
+    // Notification failure must never break registration
+  }
+
   var message = autoApprove
     ? "Registration successful. You can now log in."
     : "Registration submitted. Awaiting admin approval.";
@@ -4773,8 +4791,67 @@ function sendTelegramMessage(settings, message) {
 }
 
 // ---------------------------------------------------------------------------
-// Telegram Daily Trigger (T126)
+// Telegram Notification Functions
 // ---------------------------------------------------------------------------
+
+/**
+ * buildFollowupReminder — Queries VISIT_SUMMARY for confirmed visits without
+ * follow-up records and sends a summary notification via Telegram.
+ * Called by dailyTrigger() when notify_followup === "Y".
+ */
+function buildFollowupReminder(settings) {
+  var ss = getSpreadsheet();
+  var facilitiesMap = getFacilitiesMap();
+
+  // Build set of VNs that already have a follow-up record
+  var fuSheet = ss.getSheetByName("FOLLOWUP");
+  var fuVNSet = {};
+  if (fuSheet) {
+    var fuData = fuSheet.getDataRange().getValues();
+    for (var f = 1; f < fuData.length; f++) {
+      var fuVN = String(fuData[f][FOLLOWUP_COLS.vn]).trim();
+      if (fuVN) fuVNSet[fuVN] = true;
+    }
+  }
+
+  // Find confirmed visits without follow-up, group by hosp_code
+  var vsSheet = ss.getSheetByName("VISIT_SUMMARY");
+  if (!vsSheet) return { sent: false };
+
+  var vsData = vsSheet.getDataRange().getValues();
+  var pendingByHosp = {};
+
+  for (var v = 1; v < vsData.length; v++) {
+    if (String(vsData[v][VISIT_SUMMARY_COLS.dispensing_confirmed]) === "Y") {
+      var vn = String(vsData[v][VISIT_SUMMARY_COLS.vn]);
+      if (!fuVNSet[vn]) {
+        var hospCode = String(vsData[v][VISIT_SUMMARY_COLS.hosp_code]);
+        if (!pendingByHosp[hospCode]) pendingByHosp[hospCode] = 0;
+        pendingByHosp[hospCode]++;
+      }
+    }
+  }
+
+  var codes = Object.keys(pendingByHosp);
+  if (codes.length === 0) return { sent: false };
+
+  // Build message
+  var systemName = settings.system_name || "Telemed Tracking";
+  var message = "<b>" + systemName + "</b>\n";
+  message += "แจ้งเตือนผู้ป่วยรอติดตาม\n\n";
+  message += "จำนวน " + codes.length + " แห่ง:\n\n";
+
+  var totalPending = 0;
+  for (var c = 0; c < codes.length; c++) {
+    var hospName = facilitiesMap[codes[c]] || getHospName(codes[c]);
+    message += "- " + hospName + ": " + pendingByHosp[codes[c]] + " ราย\n";
+    totalPending += pendingByHosp[codes[c]];
+  }
+
+  message += "\nรวม " + totalPending + " รายรอติดตาม";
+
+  return sendTelegramMessage(settings, message);
+}
 
 /**
  * dailyTrigger — Called by GAS time-driven trigger (e.g., 07:00 daily).
@@ -4791,114 +4868,119 @@ function dailyTrigger() {
 
   var settings = getSettingsMap();
 
-  // Check if Telegram notifications are enabled
-  if (settings.telegram_active !== "Y") return;
-
+  // Guard: need bot_token and chat_id for any notification
   var botToken = settings.bot_token || "";
   var chatId = settings.chat_id || "";
-  var systemName = settings.system_name || "Telemed Tracking";
-
   if (!botToken || !chatId) return;
 
-  // Get tomorrow's date
-  var tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  var tomorrowStr = tomorrow.toISOString().split("T")[0];
+  // --- Clinic Readiness Notification ---
+  if (settings.notify_clinic_ready === "Y") {
+    var systemName = settings.system_name || "Telemed Tracking";
 
-  var ss = getSpreadsheet();
-  var facilitiesMap = getFacilitiesMap();
+    // Get tomorrow's date
+    var tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    var tomorrowStr = tomorrow.toISOString().split("T")[0];
 
-  // Query tomorrow's clinics
-  var csSheet = ss.getSheetByName("CLINIC_SCHEDULE");
-  if (!csSheet) return;
+    var ss = getSpreadsheet();
+    var facilitiesMap = getFacilitiesMap();
 
-  var csData = csSheet.getDataRange().getValues();
-  var clinics = [];
+    // Query tomorrow's clinics
+    var csSheet = ss.getSheetByName("CLINIC_SCHEDULE");
+    if (csSheet) {
+      var csData = csSheet.getDataRange().getValues();
+      var clinics = [];
 
-  for (var i = 1; i < csData.length; i++) {
-    var serviceDate = toDateStr(csData[i][CLINIC_SCHEDULE_COLS.service_date]);
-    if (serviceDate === tomorrowStr) {
-      var hospCode = String(csData[i][CLINIC_SCHEDULE_COLS.hosp_code]);
-      var hospName = facilitiesMap[hospCode] || getHospName(hospCode);
-      var clinicType = String(csData[i][CLINIC_SCHEDULE_COLS.clinic_type]);
-      var serviceTime = String(
-        csData[i][CLINIC_SCHEDULE_COLS.service_time] || "",
-      );
-      var appointCount =
-        Number(csData[i][CLINIC_SCHEDULE_COLS.appoint_count]) || 0;
+      for (var i = 1; i < csData.length; i++) {
+        var serviceDate = toDateStr(csData[i][CLINIC_SCHEDULE_COLS.service_date]);
+        if (serviceDate === tomorrowStr) {
+          var hospCode = String(csData[i][CLINIC_SCHEDULE_COLS.hosp_code]);
+          var hospName = facilitiesMap[hospCode] || getHospName(hospCode);
+          var clinicType = String(csData[i][CLINIC_SCHEDULE_COLS.clinic_type]);
+          var serviceTime = String(
+            csData[i][CLINIC_SCHEDULE_COLS.service_time] || "",
+          );
+          var appointCount =
+            Number(csData[i][CLINIC_SCHEDULE_COLS.appoint_count]) || 0;
 
-      clinics.push({
-        hosp_code: hospCode,
-        hosp_name: hospName,
-        clinic_type: clinicType,
-        service_time: serviceTime,
-        appoint_count: appointCount,
-      });
-    }
-  }
-
-  // Build message
-  var message = "<b>" + systemName + "</b>\n";
-  message += "คลินิกวันพรุ่งนี้ (" + tomorrowStr + ")\n\n";
-
-  if (clinics.length === 0) {
-    message += "ไม่มีนัดคลินิก\n";
-  } else {
-    for (var c = 0; c < clinics.length; c++) {
-      var clinic = clinics[c];
-      message += "- " + clinic.hosp_name + "\n";
-      message += "   ประเภท: " + clinic.clinic_type;
-      if (clinic.service_time) message += " | เวลา: " + clinic.service_time;
-      message += "\n";
-      message += "   จำนวนนัด: " + clinic.appoint_count + " ราย\n";
-      if (c < clinics.length - 1) message += "\n";
-    }
-  }
-
-  // Check equipment readiness
-  var rlSheet = ss.getSheetByName("READINESS_LOG");
-  var notReadyFacilities = [];
-  if (rlSheet) {
-    var rlData = rlSheet.getDataRange().getValues();
-    var latestReadiness = {};
-    for (var r = 1; r < rlData.length; r++) {
-      var rHospCode = String(rlData[r][READINESS_LOG_COLS.hosp_code]);
-      var rCheckDate = toDateStr(rlData[r][READINESS_LOG_COLS.check_date]);
-      var rStatus = String(rlData[r][READINESS_LOG_COLS.overall_status]);
-      if (
-        !latestReadiness[rHospCode] ||
-        rCheckDate > latestReadiness[rHospCode].check_date
-      ) {
-        latestReadiness[rHospCode] = {
-          status: rStatus,
-          check_date: rCheckDate,
-        };
-      }
-    }
-
-    // Check readiness of facilities with tomorrow's clinics
-    var checkedCodes = {};
-    for (var cl = 0; cl < clinics.length; cl++) {
-      var cHospCode = clinics[cl].hosp_code;
-      if (cHospCode && !checkedCodes[cHospCode]) {
-        checkedCodes[cHospCode] = true;
-        var readiness = latestReadiness[cHospCode];
-        if (!readiness || readiness.status !== "ready") {
-          notReadyFacilities.push(clinics[cl].hosp_name);
+          clinics.push({
+            hosp_code: hospCode,
+            hosp_name: hospName,
+            clinic_type: clinicType,
+            service_time: serviceTime,
+            appoint_count: appointCount,
+          });
         }
       }
+
+      // Build message
+      var message = "<b>" + systemName + "</b>\n";
+      message += "คลินิกวันพรุ่งนี้ (" + tomorrowStr + ")\n\n";
+
+      if (clinics.length === 0) {
+        message += "ไม่มีนัดคลินิก\n";
+      } else {
+        for (var c = 0; c < clinics.length; c++) {
+          var clinic = clinics[c];
+          message += "- " + clinic.hosp_name + "\n";
+          message += "   ประเภท: " + clinic.clinic_type;
+          if (clinic.service_time) message += " | เวลา: " + clinic.service_time;
+          message += "\n";
+          message += "   จำนวนนัด: " + clinic.appoint_count + " ราย\n";
+          if (c < clinics.length - 1) message += "\n";
+        }
+      }
+
+      // Check equipment readiness
+      var rlSheet = ss.getSheetByName("READINESS_LOG");
+      var notReadyFacilities = [];
+      if (rlSheet) {
+        var rlData = rlSheet.getDataRange().getValues();
+        var latestReadiness = {};
+        for (var r = 1; r < rlData.length; r++) {
+          var rHospCode = String(rlData[r][READINESS_LOG_COLS.hosp_code]);
+          var rCheckDate = toDateStr(rlData[r][READINESS_LOG_COLS.check_date]);
+          var rStatus = String(rlData[r][READINESS_LOG_COLS.overall_status]);
+          if (
+            !latestReadiness[rHospCode] ||
+            rCheckDate > latestReadiness[rHospCode].check_date
+          ) {
+            latestReadiness[rHospCode] = {
+              status: rStatus,
+              check_date: rCheckDate,
+            };
+          }
+        }
+
+        // Check readiness of facilities with tomorrow's clinics
+        var checkedCodes = {};
+        for (var cl = 0; cl < clinics.length; cl++) {
+          var cHospCode = clinics[cl].hosp_code;
+          if (cHospCode && !checkedCodes[cHospCode]) {
+            checkedCodes[cHospCode] = true;
+            var readiness = latestReadiness[cHospCode];
+            if (!readiness || readiness.status !== "ready") {
+              notReadyFacilities.push(clinics[cl].hosp_name);
+            }
+          }
+        }
+      }
+
+      if (notReadyFacilities.length > 0) {
+        message += "\n<b>อุปกรณ์ยังไม่พร้อม:</b>\n";
+        for (var nr = 0; nr < notReadyFacilities.length; nr++) {
+          message += "  [X] " + notReadyFacilities[nr] + "\n";
+        }
+      }
+
+      sendTelegramMessage(settings, message);
     }
   }
 
-  if (notReadyFacilities.length > 0) {
-    message += "\n<b>อุปกรณ์ยังไม่พร้อม:</b>\n";
-    for (var nr = 0; nr < notReadyFacilities.length; nr++) {
-      message += "  [X] " + notReadyFacilities[nr] + "\n";
-    }
+  // --- Follow-up Reminder Notification ---
+  if (settings.notify_followup === "Y") {
+    try { buildFollowupReminder(settings); } catch (e) { /* non-critical */ }
   }
-
-  // Send via Telegram
-  sendTelegramMessage(settings, message);
 }
 
 // ---------------------------------------------------------------------------
@@ -5102,10 +5184,11 @@ function sampleData() {
     var settings = [
       ["bot_token", ""],
       ["chat_id", ""],
-      ["alert_time", "07:00"],
       ["system_name", "Telemed Tracking คปสอ.สอง"],
-      ["telegram_active", "N"],
       ["app_url", "https://telemed-song.pages.dev"],
+      ["notify_clinic_ready", "Y"],
+      ["notify_followup", "Y"],
+      ["notify_new_user", "Y"],
     ];
     setSheet
       .getRange(2, 1, settings.length, settings[0].length)

@@ -11,9 +11,10 @@ import { useSettingsGet, useSettingsSave } from './useSettings'
 const telegramSchema = z.object({
   bot_token: z.string().min(1, 'กรุณาระบุ Bot Token'),
   chat_id: z.string().min(1, 'กรุณาระบุ Chat ID'),
-  alert_time: z.string().min(1, 'กรุณาระบุเวลาแจ้งเตือน'),
   system_name: z.string().min(1, 'กรุณาระบุชื่อระบบ'),
-  telegram_active: z.string(),
+  notify_clinic_ready: z.string(),
+  notify_followup: z.string(),
+  notify_new_user: z.string(),
 })
 
 type TelegramFormValues = z.infer<typeof telegramSchema>
@@ -21,10 +22,29 @@ type TelegramFormValues = z.infer<typeof telegramSchema>
 const DEFAULTS: TelegramFormValues = {
   bot_token: '',
   chat_id: '',
-  alert_time: '07:00',
   system_name: 'Telemed Tracking คปสอ.สอง',
-  telegram_active: 'N',
+  notify_clinic_ready: 'Y',
+  notify_followup: 'Y',
+  notify_new_user: 'Y',
 }
+
+const NOTIFICATION_TYPES: { key: keyof TelegramFormValues; label: string; description: string }[] = [
+  {
+    key: 'notify_clinic_ready',
+    label: 'แจ้งเตือนคลินิกวันพรุ่งนี้',
+    description: 'ส่งสรุปนัดคลินิกและสถานะอุปกรณ์ (ทุกวัน 07:00)',
+  },
+  {
+    key: 'notify_followup',
+    label: 'แจ้งเตือน Follow-up ค้างอยู่',
+    description: 'ส่งรายการผู้ป่วยที่จ่ายยาแล้วแต่ยังไม่มีการติดตาม (ทุกวัน 07:00)',
+  },
+  {
+    key: 'notify_new_user',
+    label: 'แจ้งเตือนผู้ใช้ใหม่ลงทะเบียน',
+    description: 'ส่งทันทีเมื่อมีผู้ใช้ใหม่ลงทะเบียน',
+  },
+]
 
 export function TelegramSettings() {
   const { data: settingsData, isLoading } = useSettingsGet()
@@ -42,9 +62,10 @@ export function TelegramSettings() {
   const formValues: TelegramFormValues = {
     bot_token: settingsMap.bot_token ?? DEFAULTS.bot_token,
     chat_id: settingsMap.chat_id ?? DEFAULTS.chat_id,
-    alert_time: settingsMap.alert_time ?? DEFAULTS.alert_time,
     system_name: settingsMap.system_name ?? DEFAULTS.system_name,
-    telegram_active: settingsMap.telegram_active ?? DEFAULTS.telegram_active,
+    notify_clinic_ready: settingsMap.notify_clinic_ready ?? DEFAULTS.notify_clinic_ready,
+    notify_followup: settingsMap.notify_followup ?? DEFAULTS.notify_followup,
+    notify_new_user: settingsMap.notify_new_user ?? DEFAULTS.notify_new_user,
   }
 
   const { register, handleSubmit, getValues, setValue, watch, formState: { errors } } = useForm<TelegramFormValues>({
@@ -82,7 +103,7 @@ export function TelegramSettings() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="bot_token">Bot Token</Label>
@@ -109,19 +130,7 @@ export function TelegramSettings() {
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="alert_time">เวลาแจ้งเตือน</Label>
-          <Input
-            id="alert_time"
-            type="time"
-            {...register('alert_time')}
-          />
-          {errors.alert_time && (
-            <p role="alert" className="text-xs text-destructive">{errors.alert_time.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
+        <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="system_name">ชื่อระบบ</Label>
           <Input
             id="system_name"
@@ -133,13 +142,24 @@ export function TelegramSettings() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <Switch
-          id="telegram_active"
-          checked={watch('telegram_active') === 'Y'}
-          onCheckedChange={(checked) => setValue('telegram_active', checked ? 'Y' : 'N', { shouldDirty: true })}
-        />
-        <Label htmlFor="telegram_active">เปิดใช้งานแจ้งเตือน Telegram</Label>
+      {/* Notification type toggles */}
+      <div className="rounded-md border p-4 space-y-4">
+        <h3 className="text-sm font-medium">ประเภทการแจ้งเตือน</h3>
+        {NOTIFICATION_TYPES.map((type) => (
+          <div key={type.key} className="flex items-center justify-between gap-4">
+            <div className="space-y-0.5">
+              <Label htmlFor={type.key} className="text-sm font-normal cursor-pointer">
+                {type.label}
+              </Label>
+              <p className="text-xs text-muted-foreground">{type.description}</p>
+            </div>
+            <Switch
+              id={type.key}
+              checked={watch(type.key) === 'Y'}
+              onCheckedChange={(checked) => setValue(type.key, checked ? 'Y' : 'N', { shouldDirty: true })}
+            />
+          </div>
+        ))}
       </div>
 
       <div className="flex items-center gap-3 pt-2">
