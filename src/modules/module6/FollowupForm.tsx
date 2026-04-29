@@ -133,7 +133,7 @@ export function FollowupForm({ vn, editRecord, onCancelEdit, onSuccess }: Follow
         <Label>การรับประทานยา</Label>
         <Select
           value={watch('drug_adherence') ?? 'ไม่ได้ระบุ'}
-          onValueChange={(v) => setValue('drug_adherence', v === 'ไม่ได้ระบุ' ? '' : v, { shouldValidate: true })}
+          onValueChange={(v) => setValue('drug_adherence', (v != null && v !== 'ไม่ได้ระบุ') ? v : '', { shouldValidate: true })}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="เลือก..." />
