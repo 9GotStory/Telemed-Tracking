@@ -56,7 +56,7 @@ export const router = createBrowserRouter([
         path: '/module2',
         element: (
           <ErrorBoundary>
-            <RoleGuard allowedRoles={['super_admin', 'admin_hosp']}>
+            <RoleGuard allowedRoles={['super_admin', 'admin_hosp', 'staff_sao']}>
               <ReadinessPage />
             </RoleGuard>
           </ErrorBoundary>
@@ -70,7 +70,7 @@ export const router = createBrowserRouter([
         path: '/module4',
         element: (
           <ErrorBoundary>
-            <RoleGuard allowedRoles={['super_admin', 'admin_hosp', 'staff_hosp']}>
+            <RoleGuard allowedRoles={['super_admin', 'admin_hosp', 'staff_sao', 'staff_hosp']}>
               <ImportPage />
             </RoleGuard>
           </ErrorBoundary>
@@ -84,7 +84,7 @@ export const router = createBrowserRouter([
         path: '/module6',
         element: (
           <ErrorBoundary>
-            <RoleGuard allowedRoles={['super_admin', 'admin_hosp']}>
+            <RoleGuard allowedRoles={['super_admin', 'admin_hosp', 'staff_sao']}>
               <FollowupPage />
             </RoleGuard>
           </ErrorBoundary>
@@ -94,7 +94,7 @@ export const router = createBrowserRouter([
         path: '/master-drugs',
         element: (
           <ErrorBoundary>
-            <RoleGuard allowedRoles={['super_admin', 'admin_hosp']}>
+            <RoleGuard allowedRoles={['super_admin', 'admin_hosp', 'staff_sao']}>
               <MasterDrugPage />
             </RoleGuard>
           </ErrorBoundary>

@@ -16,21 +16,40 @@ import { useUsersList } from './useUsers'
 import type { UserFilters, UserItem } from '@/services/usersService'
 import { useDebugMount } from '@/hooks/useDebugLog'
 
+const STATUS_OPTIONS = [
+  { value: '__all__', label: 'ทุกสถานะ' },
+  { value: 'pending', label: 'รออนุมัติ' },
+  { value: 'active', label: 'ใช้งานอยู่' },
+  { value: 'inactive', label: 'ระงับ' },
+] as const
+
+const ROLE_OPTIONS = [
+  { value: '__all__', label: 'ทุกบทบาท' },
+  { value: 'super_admin', label: 'Super Admin' },
+  { value: 'admin_hosp', label: 'Admin รพ.' },
+  { value: 'staff_sao', label: 'เจ้าหน้าที่ สสอ.' },
+  { value: 'staff_hosp', label: 'จนท. รพ.' },
+  { value: 'staff_hsc', label: 'จนท. รพ.สต.' },
+] as const
+
 export default function UsersPage() {
   useDebugMount('UsersPage')
-  const [statusFilter, setStatusFilter] = useState<string>('')
-  const [roleFilter, setRoleFilter] = useState<string>('')
+  const [statusFilter, setStatusFilter] = useState('__all__')
+  const [roleFilter, setRoleFilter] = useState('__all__')
   const [approveUser, setApproveUser] = useState<UserItem | null>(null)
 
   const filters = useMemo<UserFilters>(() => {
     const f: UserFilters = {}
-    if (statusFilter && statusFilter !== '__all__') f.status = statusFilter
-    if (roleFilter && roleFilter !== '__all__') f.role = roleFilter
+    if (statusFilter !== '__all__') f.status = statusFilter
+    if (roleFilter !== '__all__') f.role = roleFilter
     return f
   }, [statusFilter, roleFilter])
 
   const { data: users = [], isLoading, isError, refetch } = useUsersList(filters)
   const pendingCount = users.filter((u) => u.status === 'pending').length
+
+  const statusLabel = STATUS_OPTIONS.find((o) => o.value === statusFilter)?.label ?? 'ทุกสถานะ'
+  const roleLabel = ROLE_OPTIONS.find((o) => o.value === roleFilter)?.label ?? 'ทุกบทบาท'
 
   return (
     <PageWrapper>
@@ -50,31 +69,27 @@ export default function UsersPage() {
 
         {/* Filters */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Select value={statusFilter || '__all__'} onValueChange={(v) => { if (v) setStatusFilter(v === '__all__' ? '' : v) }} items={[{ label: 'ทุกสถานะ', value: '__all__' }, { label: 'รออนุมัติ', value: 'pending' }, { label: 'ใช้งานอยู่', value: 'active' }, { label: 'ระงับ', value: 'inactive' }]}>
+          <Select value={statusFilter} onValueChange={(v) => { if (v) setStatusFilter(v) }}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="ทุกสถานะ" />
+              <SelectValue>{statusLabel}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value="__all__">ทุกสถานะ</SelectItem>
-                <SelectItem value="pending">รออนุมัติ</SelectItem>
-                <SelectItem value="active">ใช้งานอยู่</SelectItem>
-                <SelectItem value="inactive">ระงับ</SelectItem>
+                {STATUS_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
               </SelectGroup>
             </SelectContent>
           </Select>
-          <Select value={roleFilter || '__all__'} onValueChange={(v) => { if (v) setRoleFilter(v === '__all__' ? '' : v) }} items={[{ label: 'ทุกบทบาท', value: '__all__' }, { label: 'Super Admin', value: 'super_admin' }, { label: 'Admin รพ.', value: 'admin_hosp' }, { label: 'เจ้าหน้าที่ สสอ.', value: 'staff_sao' }, { label: 'จนท. รพ.', value: 'staff_hosp' }, { label: 'จนท. รพ.สต.', value: 'staff_hsc' }]}>
+          <Select value={roleFilter} onValueChange={(v) => { if (v) setRoleFilter(v) }}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="ทุกบทบาท" />
+              <SelectValue>{roleLabel}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value="__all__">ทุกบทบาท</SelectItem>
-                <SelectItem value="super_admin">Super Admin</SelectItem>
-                <SelectItem value="admin_hosp">Admin รพ.</SelectItem>
-                <SelectItem value="staff_sao">เจ้าหน้าที่ สสอ.</SelectItem>
-                <SelectItem value="staff_hosp">จนท. รพ.</SelectItem>
-                <SelectItem value="staff_hsc">จนท. รพ.สต.</SelectItem>
+                {ROLE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
               </SelectGroup>
             </SelectContent>
           </Select>

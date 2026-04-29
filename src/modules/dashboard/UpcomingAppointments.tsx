@@ -9,7 +9,7 @@ export function UpcomingAppointments({ appointments }: UpcomingAppointmentsProps
   if (appointments.length === 0) {
     return (
       <div className="text-center py-10 text-[rgba(0,0,0,0.48)]">
-        ไม่มีนัดหมายใน 7 วันข้างหน้า
+        ไม่มีนัดหมายในเดือนนี้
       </div>
     )
   }
@@ -17,7 +17,7 @@ export function UpcomingAppointments({ appointments }: UpcomingAppointmentsProps
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
-        <caption className="sr-only">นัดหมายใน 7 วันข้างหน้า</caption>
+        <caption className="sr-only">นัดหมายในเดือนนี้</caption>
         <thead>
           <tr className="border-b text-left text-[rgba(0,0,0,0.48)]">
             <th className="pb-2 pr-4 font-medium text-xs">วันที่</th>

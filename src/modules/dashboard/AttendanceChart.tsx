@@ -14,45 +14,36 @@ export function AttendanceChart({ data }: AttendanceChartProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {data.map((row, i) => {
         const pct = Math.round(row.rate)
+        const color =
+          pct >= 80 ? 'text-[#0071e3]' : pct >= 50 ? 'text-[rgba(0,113,227,0.7)]' : 'text-[rgba(0,0,0,0.35)]'
+        const barColor =
+          pct >= 80 ? '#0071e3' : pct >= 50 ? 'rgba(0,113,227,0.45)' : 'rgba(0,0,0,0.15)'
         return (
-          <div key={i}>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-sm font-medium text-[#1d1d1f]">{row.hosp_name}</span>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-[rgba(0,0,0,0.48)]">
-                  มา {row.total_attended} / นัด {row.total_appointed}
-                </span>
-                <span className="text-sm font-semibold text-[#1d1d1f] w-12 text-right">
-                  {pct}%
-                </span>
-              </div>
+          <div
+            key={i}
+            className="rounded-xl bg-[#f5f5f7] p-4 flex flex-col gap-2"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-[#1d1d1f] truncate mr-2">{row.hosp_name}</span>
+              <span className={`text-2xl font-semibold tabular-nums ${color}`}>
+                {pct}%
+              </span>
             </div>
-            <div className="h-2 rounded-full bg-[#f5f5f7] overflow-hidden">
+            <div className="h-1.5 rounded-full bg-white overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-500"
-                style={{
-                  width: `${pct}%`,
-                  backgroundColor: pct >= 80 ? '#0071e3' : pct >= 50 ? 'rgba(0, 113, 227, 0.45)' : 'rgba(0, 0, 0, 0.15)',
-                }}
+                style={{ width: `${pct}%`, backgroundColor: barColor }}
               />
+            </div>
+            <div className="text-xs text-[rgba(0,0,0,0.48)]">
+              มา {row.total_attended} / นัด {row.total_appointed}
             </div>
           </div>
         )
       })}
-      <div className="flex items-center gap-4 pt-2 text-xs text-[rgba(0,0,0,0.48)]">
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-2 w-2 rounded-full bg-[#0071e3]" /> ตั้งแต่ 80%
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-2 w-2 rounded-full bg-[rgba(0,113,227,0.45)]" /> 50-79%
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-2 w-2 rounded-full bg-[rgba(0,0,0,0.15)]" /> ต่ำกว่า 50%
-        </span>
-      </div>
     </div>
   )
 }

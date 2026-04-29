@@ -34,10 +34,12 @@ export function RoleSelector({ value, onValueChange }: RoleSelectorProps) {
     if (val) onValueChange(val)
   }
 
+  const displayLabel = ROLE_LABELS[value] || value || 'เลือกบทบาท'
+
   return (
-    <Select value={value} onValueChange={handleValueChange} items={managed.map(role => ({ label: ROLE_LABELS[role] ?? role, value: role }))}>
+    <Select value={value} onValueChange={handleValueChange}>
       <SelectTrigger className="w-full">
-        <SelectValue placeholder="เลือกบทบาท" />
+        <SelectValue>{displayLabel}</SelectValue>
       </SelectTrigger>
       <SelectContent>
         <SelectGroup>

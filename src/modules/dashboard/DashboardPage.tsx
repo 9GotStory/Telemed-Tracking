@@ -158,13 +158,13 @@ export default function DashboardPage() {
             className="text-2xl font-semibold text-[#1d1d1f] mb-5 tracking-tight"
             style={{ letterSpacing: '-0.01em' }}
           >
-            นัดใน 7 วันข้างหน้า
+            นัดหมายในเดือนนี้
           </h2>
           <UpcomingAppointments appointments={stats.upcoming_appointments} />
         </section>
 
         {/* Attendance by Facility */}
-        <section className="rounded-lg bg-white p-6 shadow-[0_3px_15px_rgba(0,0,0,0.08)]">
+        <section>
           <h2
             className="text-2xl font-semibold text-[#1d1d1f] mb-5 tracking-tight"
             style={{ letterSpacing: '-0.01em' }}

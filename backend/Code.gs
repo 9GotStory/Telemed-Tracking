@@ -1245,16 +1245,17 @@ function handleDashboardStats() {
     });
   }
 
-  // ---- 2. Upcoming appointments: next 7 days from CLINIC_SCHEDULE ----
+  // ---- 2. Upcoming appointments: current month from CLINIC_SCHEDULE ----
   var upcomingAppointments = [];
   var today = new Date();
-  var sevenDaysLater = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-  var todayStr = today.toISOString().split("T")[0];
-  var laterStr = sevenDaysLater.toISOString().split("T")[0];
+  var monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  var monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  var monthStartStr = monthStart.toISOString().split("T")[0];
+  var monthEndStr = monthEnd.toISOString().split("T")[0];
 
   for (var c = 1; c < csData.length; c++) {
     var serviceDate = toDateStr(csData[c][CLINIC_SCHEDULE_COLS.service_date]);
-    if (serviceDate >= todayStr && serviceDate <= laterStr) {
+    if (serviceDate >= monthStartStr && serviceDate <= monthEndStr) {
       var csHospCode = String(csData[c][CLINIC_SCHEDULE_COLS.hosp_code]);
       upcomingAppointments.push({
         service_date: serviceDate,
