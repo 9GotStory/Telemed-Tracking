@@ -1857,7 +1857,7 @@ function handleMasterDrugList(user, params) {
 function handleMasterDrugSave(user, data) {
   debugTrace("handleMasterDrugSave.start", { drug_name: String(data.drug_name || "") });
   // Access control
-  if (user.role !== "super_admin" && user.role !== "admin_hosp") {
+  if (user.role !== "super_admin" && user.role !== "admin_hosp" && user.role !== "staff_sao") {
     return { success: false, error: "Access denied: admin only" };
   }
 
@@ -1970,7 +1970,7 @@ function handleMasterDrugSave(user, data) {
  */
 function handleMasterDrugDelete(user, data) {
   // Access control
-  if (user.role !== "super_admin" && user.role !== "admin_hosp") {
+  if (user.role !== "super_admin" && user.role !== "admin_hosp" && user.role !== "staff_sao") {
     return { success: false, error: "Access denied: admin only" };
   }
 
@@ -2024,7 +2024,7 @@ function handleMasterDrugDelete(user, data) {
  */
 function handleMasterDrugImport(user, data) {
   // Access control
-  if (user.role !== "super_admin" && user.role !== "admin_hosp") {
+  if (user.role !== "super_admin" && user.role !== "admin_hosp" && user.role !== "staff_sao") {
     return { success: false, error: "Access denied: admin only" };
   }
 
@@ -2215,7 +2215,7 @@ function handleScheduleList(user, params) {
 function handleScheduleSave(user, data) {
   debugTrace("handleScheduleSave.start", { service_date: String(data.service_date || ""), hosp_code: String(data.hosp_code || "") });
   // Access control
-  if (user.role !== "super_admin" && user.role !== "admin_hosp") {
+  if (user.role !== "super_admin" && user.role !== "admin_hosp" && user.role !== "staff_sao") {
     return { success: false, error: "Access denied: admin only" };
   }
 
@@ -2462,7 +2462,7 @@ function handleScheduleRecordIncident(user, data) {
  */
 function handleReadinessList(user, params) {
   // Access control
-  if (user.role !== "super_admin" && user.role !== "admin_hosp") {
+  if (user.role !== "super_admin" && user.role !== "admin_hosp" && user.role !== "staff_sao") {
     return { success: false, error: "Access denied: admin only" };
   }
 
@@ -2522,7 +2522,7 @@ function handleReadinessList(user, params) {
  */
 function handleReadinessSave(user, data) {
   // Access control
-  if (user.role !== "super_admin" && user.role !== "admin_hosp") {
+  if (user.role !== "super_admin" && user.role !== "admin_hosp" && user.role !== "staff_sao") {
     return { success: false, error: "Access denied: admin only" };
   }
 
@@ -2650,7 +2650,7 @@ function handleReadinessSave(user, data) {
  */
 function handleAppointmentRegister(user, data) {
   // Access control
-  if (user.role !== "super_admin" && user.role !== "admin_hosp" && user.role !== "staff_hosp" && user.role !== "staff_hsc") {
+  if (user.role !== "super_admin" && user.role !== "admin_hosp" && user.role !== "staff_sao" && user.role !== "staff_hosp" && user.role !== "staff_hsc") {
     return { success: false, error: "Access denied" };
   }
 
@@ -2925,7 +2925,7 @@ function handleImportPreview(user, data) {
 function handleImportConfirm(user, data) {
   debugTrace("handleImportConfirm.start");
   // Access control
-  if (user.role !== "super_admin" && user.role !== "admin_hosp") {
+  if (user.role !== "super_admin" && user.role !== "admin_hosp" && user.role !== "staff_sao") {
     return { success: false, error: "Access denied: admin only" };
   }
 
@@ -3856,7 +3856,7 @@ function handleVisitMedsTrackDelivery(user, data) {
   }
 
   // Role-based field restrictions
-  if (user.role === "staff_hosp" || user.role === "admin_hosp") {
+  if (user.role === "staff_hosp" || user.role === "admin_hosp" || user.role === "staff_sao") {
     if (field !== "drug_sent_date") {
       return { success: false, error: "Role cannot update " + field };
     }
@@ -3923,7 +3923,7 @@ function handleVisitSummaryUpdateTel(user, data) {
   if (!vn) return { success: false, error: "vn is required" };
 
   // Only allow authorized roles (check early before expensive sheet scan)
-  if (["staff_hsc", "staff_hosp", "admin_hosp", "super_admin"].indexOf(user.role) === -1) {
+  if (["staff_hsc", "staff_hosp", "staff_sao", "admin_hosp", "super_admin"].indexOf(user.role) === -1) {
     return { success: false, error: "Forbidden" };
   }
 
@@ -3980,7 +3980,7 @@ function handleVisitSummaryUpdateTel(user, data) {
  */
 function handleFollowupList(user, params) {
   // Access control
-  if (user.role !== "super_admin" && user.role !== "admin_hosp") {
+  if (user.role !== "super_admin" && user.role !== "admin_hosp" && user.role !== "staff_sao") {
     return { success: false, error: "Access denied: admin only" };
   }
 
@@ -4144,7 +4144,7 @@ function handleFollowupList(user, params) {
 function handleFollowupSave(user, data) {
   debugTrace("handleFollowupSave.start", { vn: String(data.vn || ""), followup_date: String(data.followup_date || "") });
   // Access control
-  if (user.role !== "super_admin" && user.role !== "admin_hosp") {
+  if (user.role !== "super_admin" && user.role !== "admin_hosp" && user.role !== "staff_sao") {
     return { success: false, error: "Access denied: admin only" };
   }
 
@@ -4215,7 +4215,7 @@ function handleFollowupSave(user, data) {
  */
 function handleFollowupUpdate(user, data) {
   // Access control
-  if (user.role !== "super_admin" && user.role !== "admin_hosp") {
+  if (user.role !== "super_admin" && user.role !== "admin_hosp" && user.role !== "staff_sao") {
     return { success: false, error: "Access denied: admin only" };
   }
 
@@ -4276,7 +4276,7 @@ function handleFollowupUpdate(user, data) {
  * Access: super_admin, admin_hosp only.
  */
 function handleFollowupDelete(user, data) {
-  if (user.role !== "super_admin" && user.role !== "admin_hosp") {
+  if (user.role !== "super_admin" && user.role !== "admin_hosp" && user.role !== "staff_sao") {
     return { success: false, error: "Access denied: admin only" };
   }
 

@@ -63,7 +63,7 @@ export default function UsersPage() {
               </SelectGroup>
             </SelectContent>
           </Select>
-          <Select value={roleFilter || '__all__'} onValueChange={(v) => { if (v) setRoleFilter(v === '__all__' ? '' : v) }} items={[{ label: 'ทุกบทบาท', value: '__all__' }, { label: 'Super Admin', value: 'super_admin' }, { label: 'Admin รพ.', value: 'admin_hosp' }, { label: 'จนท. รพ.', value: 'staff_hosp' }, { label: 'จนท. รพ.สต.', value: 'staff_hsc' }]}>
+          <Select value={roleFilter || '__all__'} onValueChange={(v) => { if (v) setRoleFilter(v === '__all__' ? '' : v) }} items={[{ label: 'ทุกบทบาท', value: '__all__' }, { label: 'Super Admin', value: 'super_admin' }, { label: 'Admin รพ.', value: 'admin_hosp' }, { label: 'เจ้าหน้าที่ สสอ.', value: 'staff_sao' }, { label: 'จนท. รพ.', value: 'staff_hosp' }, { label: 'จนท. รพ.สต.', value: 'staff_hsc' }]}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="ทุกบทบาท" />
             </SelectTrigger>
@@ -72,6 +72,7 @@ export default function UsersPage() {
                 <SelectItem value="__all__">ทุกบทบาท</SelectItem>
                 <SelectItem value="super_admin">Super Admin</SelectItem>
                 <SelectItem value="admin_hosp">Admin รพ.</SelectItem>
+                <SelectItem value="staff_sao">เจ้าหน้าที่ สสอ.</SelectItem>
                 <SelectItem value="staff_hosp">จนท. รพ.</SelectItem>
                 <SelectItem value="staff_hsc">จนท. รพ.สต.</SelectItem>
               </SelectGroup>

@@ -10,10 +10,9 @@ import { format, addDays } from 'date-fns'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { isModuleAllowed } from '@/utils/roleGuard'
-import { getRoleHomePath } from '@/hooks/useAuth'
 import {
   Activity, LogIn, Monitor, ClipboardCheck, Calendar,
-  FileUp, Pill, Phone, Package, Users, Settings, ArrowRight,
+  FileUp, Pill, Phone, Package, Users, Settings,
 } from 'lucide-react'
 import type { UserRole } from '@/types/user'
 
@@ -103,13 +102,6 @@ export default function DashboardPage() {
                 <span className="text-white/60">สวัสดี </span>
                 <span className="font-medium">{user.first_name}</span>
               </div>
-              <Link
-                to={getRoleHomePath(user.role)}
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#2997ff] text-white hover:bg-[#2997ff]/90 px-5 py-2 text-sm font-medium transition-colors"
-              >
-                ไปหน้างาน
-                <ArrowRight className="h-4 w-4" />
-              </Link>
             </div>
           ) : (
             <div className="mt-8">

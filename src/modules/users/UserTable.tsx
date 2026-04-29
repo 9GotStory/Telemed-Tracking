@@ -10,6 +10,7 @@ import { useState } from 'react'
 const ROLE_LABELS: Record<string, string> = {
   super_admin: 'Super Admin',
   admin_hosp: 'Admin รพ.',
+  staff_sao: 'เจ้าหน้าที่ สสอ.',
   staff_hosp: 'จนท. รพ.',
   staff_hsc: 'จนท. รพ.สต.',
 }

@@ -1,4 +1,4 @@
-export type UserRole = 'super_admin' | 'admin_hosp' | 'staff_hosp' | 'staff_hsc'
+export type UserRole = 'super_admin' | 'admin_hosp' | 'staff_sao' | 'staff_hosp' | 'staff_hsc'
 export type UserStatus = 'pending' | 'active' | 'inactive'
 
 export interface User {

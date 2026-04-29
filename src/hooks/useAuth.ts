@@ -11,6 +11,7 @@ export function getRoleHomePath(role: string): string {
   switch (role) {
     case 'super_admin':
     case 'admin_hosp':
+    case 'staff_sao':
       return '/module3' // Schedule overview
     case 'staff_hosp':
       return '/module4' // Import
