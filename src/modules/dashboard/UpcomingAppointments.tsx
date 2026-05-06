@@ -1,17 +1,15 @@
 import type { UpcomingAppointment } from '@/services/dashboardService'
 import { formatBuddhist } from '@/utils/dateUtils'
-import { isBefore, startOfDay, parseISO } from 'date-fns'
+import { isBefore, startOfDay, parseISO, isValid } from 'date-fns'
 
 interface UpcomingAppointmentsProps {
   appointments: UpcomingAppointment[]
 }
 
 function isPastDate(dateStr: string): boolean {
-  try {
-    return isBefore(startOfDay(parseISO(dateStr)), startOfDay(new Date()))
-  } catch {
-    return false
-  }
+  const parsed = parseISO(dateStr)
+  if (!isValid(parsed)) return false
+  return isBefore(startOfDay(parsed), startOfDay(new Date()))
 }
 
 export function UpcomingAppointments({ appointments }: UpcomingAppointmentsProps) {
@@ -26,7 +24,7 @@ export function UpcomingAppointments({ appointments }: UpcomingAppointmentsProps
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
-        <caption className="sr-only">นัดหมายในเดือนนี้</caption>
+        <caption className="sr-only">นัดหมาย</caption>
         <thead>
           <tr className="border-b text-left text-[rgba(0,0,0,0.48)]">
             <th className="pb-2 pr-4 font-medium text-xs">วันที่</th>
@@ -36,7 +34,7 @@ export function UpcomingAppointments({ appointments }: UpcomingAppointmentsProps
           </tr>
         </thead>
         <tbody>
-          {appointments.map((appt, i) => {
+          {appointments.map((appt) => {
             const past = isPastDate(appt.service_date)
             const rowClass = past ? 'opacity-45' : ''
             const badgeClass = past
@@ -44,7 +42,7 @@ export function UpcomingAppointments({ appointments }: UpcomingAppointmentsProps
               : 'bg-[#0071e3]/10 text-[#0071e3]'
 
             return (
-              <tr key={i} className={`border-b border-[rgba(0,0,0,0.06)] last:border-0 ${rowClass}`}>
+              <tr key={`${appt.service_date}-${appt.hosp_name}-${appt.clinic_type}`} className={`border-b border-[rgba(0,0,0,0.06)] last:border-0 ${rowClass}`}>
                 <td className="py-3 pr-4 text-[#1d1d1f] font-medium">
                   {formatBuddhist(appt.service_date)}
                 </td>

@@ -52,6 +52,36 @@ export function formatShortDate(isoDate: string): string {
 }
 
 /**
+ * Format current month range in Thai (e.g. "1 – 31 พฤษภาคม 2569").
+ */
+export function currentMonthRangeThai(): string {
+  const now = new Date()
+  const buddhistYear = now.getFullYear() + 543
+  const thaiMonths = [
+    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม',
+  ]
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+  return `1 – ${lastDay} ${thaiMonths[now.getMonth()]} ${buddhistYear}`
+}
+
+/**
+ * Format "YYYY-MM" month key to short Thai display (e.g. "พ.ค. 2569").
+ */
+export function formatMonthShortThai(monthKey: string): string {
+  const parts = monthKey.split('-')
+  if (parts.length < 2) return monthKey
+  const monthIndex = parseInt(parts[1], 10) - 1
+  if (monthIndex < 0 || monthIndex > 11) return monthKey
+  const buddhistYear = parseInt(parts[0], 10) + 543
+  const thaiMonthsShort = [
+    'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+    'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.',
+  ]
+  return `${thaiMonthsShort[monthIndex]} ${buddhistYear}`
+}
+
+/**
  * Get today's date as ISO string (YYYY-MM-DD).
  */
 export function todayISO(): string {

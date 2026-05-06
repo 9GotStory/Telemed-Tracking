@@ -1,4 +1,5 @@
 import type { DashboardStats } from '@/services/dashboardService'
+import { format } from 'date-fns'
 import { CalendarCheck, UserCheck, PhoneForwarded, MonitorCheck } from 'lucide-react'
 
 interface StatsCardsProps {
@@ -6,10 +7,8 @@ interface StatsCardsProps {
 }
 
 export function StatsCards({ stats }: StatsCardsProps) {
-  const sessionsThisMonth = (() => {
-    const months = Object.keys(stats.monthly_sessions).sort().reverse()
-    return months.length > 0 ? stats.monthly_sessions[months[0]] : 0
-  })()
+  const currentMonth = format(new Date(), 'yyyy-MM')
+  const sessionsThisMonth = stats.monthly_sessions[currentMonth] ?? 0
 
   const attendanceRate = (() => {
     const total = stats.attendance_by_facility.reduce((s, r) => s + r.total_appointed, 0)

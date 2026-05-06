@@ -1229,6 +1229,7 @@ function handleHospitalList() {
 }
 
 function handleDashboardStats() {
+  var now = new Date();
   var ss = getSpreadsheet();
   var facilitiesMap = getFacilitiesMap();
   var facilityCodes = Object.keys(facilitiesMap);
@@ -1311,14 +1312,21 @@ function handleDashboardStats() {
     }
   }
 
-  // ---- 4. Attendance by facility (ผู้ใช้บริการ) ----
+  // ---- 4. Attendance by facility (ผู้ใช้บริการ) — เดือนปัจจุบัน ----
   var attendanceByFacility = [];
   var facilityAttMap = {}; // hosp_code -> { appointed, attended }
 
-  // Build appoint_count lookup from CLINIC_SCHEDULE (reuse csData)
+  // Current month boundaries
+  var nowMonth = now.getFullYear() + "-" + ("0" + (now.getMonth() + 1)).slice(-2);
+  var monthStart = nowMonth + "-01";
+  var monthEndDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  var monthEnd = nowMonth + "-" + ("0" + monthEndDate.getDate()).slice(-2);
+
+  // Build appoint_count lookup from CLINIC_SCHEDULE — current month only
   var scheduleAppointments = {}; // date|code -> appoint_count
   for (var sa = 1; sa < csData.length; sa++) {
     var saDate = toDateStr(csData[sa][CLINIC_SCHEDULE_COLS.service_date]);
+    if (saDate < monthStart || saDate > monthEnd) continue;
     var saHosp = String(csData[sa][CLINIC_SCHEDULE_COLS.hosp_code]);
     var saKey = saDate + "|" + saHosp;
     scheduleAppointments[saKey] =
@@ -1326,8 +1334,10 @@ function handleDashboardStats() {
       (Number(csData[sa][CLINIC_SCHEDULE_COLS.appoint_count]) || 0);
   }
 
-  // Count attended from VISIT_SUMMARY (reuse vsData)
+  // Count attended from VISIT_SUMMARY — current month only
   for (var va = 1; va < vsData.length; va++) {
+    var vsDate = toDateStr(vsData[va][VISIT_SUMMARY_COLS.service_date]);
+    if (vsDate < monthStart || vsDate > monthEnd) continue;
     var vsHosp = String(vsData[va][VISIT_SUMMARY_COLS.hosp_code]);
     var vsAttended = String(vsData[va][VISIT_SUMMARY_COLS.attended]);
 
@@ -1388,6 +1398,49 @@ function handleDashboardStats() {
     }
   }
 
+  // ---- 6. Monthly attendance breakdown (last 6 months) ----
+  var monthlyAttMap = {}; // month -> { appointed, attended }
+  for (var ma = 1; ma < csData.length; ma++) {
+    var maDate = toDateStr(csData[ma][CLINIC_SCHEDULE_COLS.service_date]);
+    var maMonth = maDate.substring(0, 7);
+    if (maMonth.length !== 7) continue;
+    if (!monthlyAttMap[maMonth]) monthlyAttMap[maMonth] = { appointed: 0, attended: 0 };
+    monthlyAttMap[maMonth].appointed += Number(csData[ma][CLINIC_SCHEDULE_COLS.appoint_count]) || 0;
+  }
+  for (var mv = 1; mv < vsData.length; mv++) {
+    var mvDate = toDateStr(vsData[mv][VISIT_SUMMARY_COLS.service_date]);
+    var mvMonth = mvDate.substring(0, 7);
+    if (mvMonth.length !== 7) continue;
+    if (!monthlyAttMap[mvMonth]) monthlyAttMap[mvMonth] = { appointed: 0, attended: 0 };
+    if (String(vsData[mv][VISIT_SUMMARY_COLS.attended]) === "Y") {
+      monthlyAttMap[mvMonth].attended++;
+    }
+  }
+  var monthlyAttendance = Object.keys(monthlyAttMap).sort().slice(-6).map(function (mk) {
+    var mApp = monthlyAttMap[mk].appointed;
+    var mAtt = monthlyAttMap[mk].attended;
+    return { month: mk, total_appointed: mApp, total_attended: mAtt, rate: mApp > 0 ? Math.round((mAtt / mApp) * 1000) / 10 : 0 };
+  });
+
+  // ---- 7. Monthly followup breakdown (last 6 months) ----
+  var monthlyFuMap = {}; // month -> { followed, pending }
+  for (var mfp = 1; mfp < vsData.length; mfp++) {
+    if (String(vsData[mfp][VISIT_SUMMARY_COLS.dispensing_confirmed]) !== "Y") continue;
+    var mfpDate = toDateStr(vsData[mfp][VISIT_SUMMARY_COLS.service_date]);
+    var mfpMonth = mfpDate.substring(0, 7);
+    if (mfpMonth.length !== 7) continue;
+    if (!monthlyFuMap[mfpMonth]) monthlyFuMap[mfpMonth] = { followed: 0, pending: 0 };
+    var mfpVN = String(vsData[mfp][VISIT_SUMMARY_COLS.vn]);
+    if (fuVNSet[mfpVN]) {
+      monthlyFuMap[mfpMonth].followed++;
+    } else {
+      monthlyFuMap[mfpMonth].pending++;
+    }
+  }
+  var monthlyFollowup = Object.keys(monthlyFuMap).sort().slice(-6).map(function (fmk) {
+    return { month: fmk, followed: monthlyFuMap[fmk].followed, pending: monthlyFuMap[fmk].pending };
+  });
+
   // ---- Assemble response ----
   return {
     success: true,
@@ -1397,6 +1450,8 @@ function handleDashboardStats() {
       monthly_sessions: monthlySessions,
       attendance_by_facility: attendanceByFacility,
       followup_pipeline: followupPipeline,
+      monthly_attendance: monthlyAttendance,
+      monthly_followup: monthlyFollowup,
     },
   };
 }
@@ -2266,7 +2321,7 @@ function handleScheduleSave(user, data) {
   // Validate clinic_type against allowed values
   var validClinicTypes = [
     "PCU-DM", "PCU-HT", "ANC-nutrition", "ANC-parent",
-    "postpartum-EPI", "postpartum-dev",
+    "postpartum-EPI", "postpartum-dev", "PCU-COPD",
   ];
   if (validClinicTypes.indexOf(clinicType) === -1) {
     return { success: false, error: "Invalid clinic_type: " + clinicType };
@@ -2716,7 +2771,7 @@ function handleAppointmentRegister(user, data) {
 
   var validClinicTypes = [
     "PCU-DM", "PCU-HT", "ANC-nutrition", "ANC-parent",
-    "postpartum-EPI", "postpartum-dev",
+    "postpartum-EPI", "postpartum-dev", "PCU-COPD",
   ];
 
   var registered = 0;

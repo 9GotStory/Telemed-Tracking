@@ -1,4 +1,4 @@
-export type ClinicType = 'PCU-DM' | 'PCU-HT' | 'ANC-nutrition' | 'ANC-parent' | 'postpartum-EPI' | 'postpartum-dev'
+export type ClinicType = 'PCU-DM' | 'PCU-HT' | 'PCU-COPD' | 'ANC-nutrition' | 'ANC-parent' | 'postpartum-EPI' | 'postpartum-dev'
 export type DrugSource = 'hosp_stock' | 'hosp_pending'
 
 // Re-export from constants for single source of truth — consumers should prefer these

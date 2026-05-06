@@ -17,7 +17,7 @@ export function FollowupPipeline({ pipeline }: FollowupPipelineProps) {
   }
 
   const followedPct = Math.round((pipeline.followed / total) * 100)
-  const pendingPct = Math.round((pipeline.pending / total) * 100)
+  const pendingPct = 100 - followedPct
 
   return (
     <div className="grid grid-cols-2 gap-4">

@@ -34,12 +34,27 @@ const followupPipelineSchema = z.object({
 
 const monthlySessionsSchema = z.record(z.string(), z.number())
 
+const monthlyAttendanceRowSchema = z.object({
+  month: z.string(),
+  total_appointed: z.number(),
+  total_attended: z.number(),
+  rate: z.number(),
+})
+
+const monthlyFollowupRowSchema = z.object({
+  month: z.string(),
+  followed: z.number(),
+  pending: z.number(),
+})
+
 export const dashboardStatsSchema = z.object({
   equipment_status: z.array(equipmentStatusSchema),
   upcoming_appointments: z.array(upcomingAppointmentSchema),
   monthly_sessions: monthlySessionsSchema,
   attendance_by_facility: z.array(attendanceRowSchema),
   followup_pipeline: followupPipelineSchema,
+  monthly_attendance: z.array(monthlyAttendanceRowSchema).optional(),
+  monthly_followup: z.array(monthlyFollowupRowSchema).optional(),
 })
 
 // ---------------------------------------------------------------------------
@@ -50,6 +65,8 @@ export type EquipmentStatus = z.infer<typeof equipmentStatusSchema>
 export type UpcomingAppointment = z.infer<typeof upcomingAppointmentSchema>
 export type AttendanceRow = z.infer<typeof attendanceRowSchema>
 export type FollowupPipeline = z.infer<typeof followupPipelineSchema>
+export type MonthlyAttendanceRow = z.infer<typeof monthlyAttendanceRowSchema>
+export type MonthlyFollowupRow = z.infer<typeof monthlyFollowupRowSchema>
 export type DashboardStats = z.infer<typeof dashboardStatsSchema>
 
 // ---------------------------------------------------------------------------
