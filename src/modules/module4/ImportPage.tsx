@@ -21,8 +21,9 @@ import { CLINIC_TYPES } from '@/constants/clinicTypes'
 import type { ParsedRow, ParseResult } from '@/utils/excelParser'
 import { useAuthStore } from '@/stores/authStore'
 import { useFacilitiesList } from '@/hooks/useFacilities'
-import { ChevronLeft, ChevronRight, Info } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, Info, Loader2 } from 'lucide-react'
 import { useDebugMount } from '@/hooks/useDebugLog'
+import { downloadImportTemplate } from '@/utils/excelTemplate'
 import { cn } from '@/lib/utils'
 
 type Step = 1 | 2 | 3
@@ -87,6 +88,18 @@ function ImportExcelFlow() {
   const [hospCode, setHospCode] = useState(user?.role === 'staff_hsc' ? (user.hosp_code ?? '') : '')
   const [serviceDate, setServiceDate] = useState<Date | undefined>(undefined)
   const [clinicType, setClinicType] = useState('')
+  const [isDownloading, setIsDownloading] = useState(false)
+
+  const handleDownloadTemplate = async () => {
+    setIsDownloading(true)
+    try {
+      await downloadImportTemplate()
+    } catch (err) {
+      console.error('Template download failed', err)
+    } finally {
+      setIsDownloading(false)
+    }
+  }
 
   const previewMutation = useImportPreview()
   const confirmMutation = useImportConfirm()
@@ -168,9 +181,24 @@ function ImportExcelFlow() {
       {/* Import guide */}
       {step === 1 && (
         <div className="rounded-md border bg-btn-default-light/30 p-3 grid gap-2 text-sm">
-          <div className="flex items-center gap-2 font-medium">
-            <Info className="h-4 w-4 text-apple-blue shrink-0" />
-            รูปแบบไฟล์ที่รองรับ
+          <div className="flex items-center justify-between gap-2 font-medium">
+            <div className="flex items-center gap-2">
+              <Info className="h-4 w-4 text-apple-blue shrink-0" />
+              รูปแบบไฟล์ที่รองรับ
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isDownloading}
+              onClick={() => { void handleDownloadTemplate() }}
+            >
+              {isDownloading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="h-3.5 w-3.5" />
+              )}
+              ดาวน์โหลดตัวอย่างไฟล์
+            </Button>
           </div>
           <p className="text-muted-foreground text-xs pl-6">
             ไฟล์ Excel (.xlsx, .xls) ที่ export จาก HosXP โดยมีคอลัมน์ดังนี้:
