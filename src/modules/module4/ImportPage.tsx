@@ -214,7 +214,7 @@ function ImportExcelFlow() {
               </thead>
               <tbody className="divide-y divide-border/50">
                 <tr><td className="pr-4 py-1 font-medium text-foreground">VN *</td><td className="pr-4 py-1 text-muted-foreground">vn, VN</td><td className="py-1 text-muted-foreground">ตัวเลข 12 หลัก <span className="font-mono">690425231611</span></td></tr>
-                <tr><td className="pr-4 py-1 font-medium text-foreground">HN *</td><td className="pr-4 py-1 text-muted-foreground">hn, HN</td><td className="py-1 text-muted-foreground">ตัวเลข 6 หลัก <span className="font-mono">000001</span></td></tr>
+                <tr><td className="pr-4 py-1 font-medium text-foreground">HN *</td><td className="pr-4 py-1 text-muted-foreground">hn, HN</td><td className="py-1 text-muted-foreground">ตัวเลข 9 หลัก <span className="font-mono">000000001</span></td></tr>
                 <tr><td className="pr-4 py-1 font-medium text-foreground">ชื่อ-สกุล *</td><td className="pr-4 py-1 text-muted-foreground">ชื่อ-สกุล, ชื่อ สกุล, ชื่อ-นามสกุล</td><td className="py-1 text-muted-foreground">สมชาย ใจดี</td></tr>
                 <tr><td className="pr-4 py-1 text-muted-foreground">วันเกิด</td><td className="pr-4 py-1 text-muted-foreground">วันเกิด, dob, DOB</td><td className="py-1 text-muted-foreground">2523-01-15</td></tr>
                 <tr><td className="pr-4 py-1 text-muted-foreground">เบอร์โทร</td><td className="pr-4 py-1 text-muted-foreground">เบอร์โทร, tel, Tel</td><td className="py-1 text-muted-foreground">0812345678</td></tr>

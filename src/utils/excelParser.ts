@@ -1,7 +1,5 @@
-/** VN format: 12 digits (YYMMDDHHmmSS) */
-const VN_REGEX = /^\d{12}$/
-/** HN format: 6 digits */
-const HN_REGEX = /^\d{6}$/
+import { HN_LENGTH, HN_REGEX, VN_LENGTH, VN_REGEX } from '@/constants/validation'
+
 /** Excel serial date cutoff — numbers above this are likely serial dates, not years */
 const SERIAL_DATE_THRESHOLD = 10000
 
@@ -103,7 +101,6 @@ export async function parseHosXPExport(arrayBuffer: ArrayBuffer): Promise<ParseR
   const rows: ParsedRow[] = []
   for (let i = 0; i < rawData.length; i++) {
     const mapped = mapRow(rawData[i], headerMapping)
-    if (!mapped) continue
 
     const rowErrors: string[] = []
 
@@ -111,16 +108,16 @@ export async function parseHosXPExport(arrayBuffer: ArrayBuffer): Promise<ParseR
     if (!mapped.vn) {
       rowErrors.push('VN ว่าง')
     } else if (!VN_REGEX.test(mapped.vn)) {
-      rowErrors.push(`VN "${mapped.vn}" ไม่ตรงตามรูปแบบ 12 หลัก (YYMMDDHHmmSS)`)
+      rowErrors.push(`VN "${mapped.vn}" ไม่ตรงตามรูปแบบ ${VN_LENGTH} หลัก (YYMMDDHHmmSS)`)
     }
     if (!mapped.hn) {
       rowErrors.push('HN ว่าง')
     } else if (!HN_REGEX.test(mapped.hn)) {
-      rowErrors.push(`HN "${mapped.hn}" ไม่ตรงตามรูปแบบ 6 หลัก`)
+      rowErrors.push(`HN "${mapped.hn}" ไม่ตรงตามรูปแบบ ${HN_LENGTH} หลัก`)
     }
     if (!mapped.patient_name) rowErrors.push('ชื่อ-สกุล ว่าง')
     if (!mapped.drug_name) rowErrors.push('ชื่อยา ว่าง')
-    if (!mapped.qty || mapped.qty <= 0) rowErrors.push('จำนวนต้องมากกว่า 0')
+    if (!(mapped.qty > 0)) rowErrors.push('จำนวนต้องมากกว่า 0')
 
     if (rowErrors.length > 0) {
       invalidRows[i] = rowErrors
@@ -179,20 +176,17 @@ function serialToDateStr(val: unknown): string {
   return String(val ?? '').trim()
 }
 
-function mapRow(raw: Record<string, unknown>, headerMapping: Record<string, string>): ParsedRow | null {
+function mapRow(raw: Record<string, unknown>, headerMapping: Record<string, string>): ParsedRow {
   const mapped: Record<string, unknown> = {}
   for (const [header, field] of Object.entries(headerMapping)) {
     mapped[field] = raw[header]
   }
 
-  const vn = String(mapped.vn ?? '').trim()
-  if (!vn) return null
-
   const qtyRaw = mapped.qty
   const qty = typeof qtyRaw === 'number' ? qtyRaw : parseInt(String(qtyRaw), 10)
 
   return {
-    vn,
+    vn: String(mapped.vn ?? '').trim(),
     hn: String(mapped.hn ?? '').trim(),
     patient_name: String(mapped.patient_name ?? '').trim(),
     dob: serialToDateStr(mapped.dob),

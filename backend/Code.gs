@@ -207,6 +207,16 @@ var SETTINGS_COLS = {
 };
 
 // ---------------------------------------------------------------------------
+// Validation Patterns (single source of truth — keep in sync with
+// src/constants/validation.ts on the frontend)
+// ---------------------------------------------------------------------------
+
+var HN_LENGTH = 9;
+var HN_PATTERN = /^\d{9}$/;
+var VN_LENGTH = 12;
+var VN_PATTERN = /^\d{12}$/;
+
+// ---------------------------------------------------------------------------
 // Sheet Header Verification
 // ---------------------------------------------------------------------------
 
@@ -2784,9 +2794,9 @@ function handleAppointmentRegister(user, data) {
     var patientName = String(apt.patient_name || "").trim();
     var clinicTypes = apt.clinic_types || [];
 
-    // Validate HN: 6-digit number
-    if (!/^\d{6}$/.test(hn)) {
-      errors.push({ hn: hn, error: "HN must be 6 digits" });
+    // Validate HN: 9-digit number
+    if (!HN_PATTERN.test(hn)) {
+      errors.push({ hn: hn, error: "HN must be " + HN_LENGTH + " digits" });
       continue;
     }
     if (!patientName) {
@@ -2951,12 +2961,22 @@ function handleImportPreview(user, data) {
     // Check VN uniqueness/existence
     if (!vn) {
       visitErrors.push("VN is empty");
+    } else if (!VN_PATTERN.test(vn)) {
+      visitErrors.push("VN must be " + VN_LENGTH + " digits");
     } else if (round === 1 && existingVNs[vn]) {
       visitErrors.push("VN already exists in VISIT_SUMMARY");
     } else if (round === 2 && !existingVNs[vn]) {
       visitErrors.push(
         "VN not found in VISIT_SUMMARY (round 2 requires existing VN)",
       );
+    }
+
+    // Check HN format (defense-in-depth: frontend already validates)
+    var hn = String(visit.hn || "").trim();
+    if (!hn) {
+      visitErrors.push("HN is empty");
+    } else if (!HN_PATTERN.test(hn)) {
+      visitErrors.push("HN must be " + HN_LENGTH + " digits");
     }
 
     // Check drug_names+strength against MASTER_DRUGS
@@ -3038,6 +3058,7 @@ function handleImportConfirm(user, data) {
   var importedVisits = 0;
   var updatedPreRegistered = 0;
   var importedMeds = 0;
+  var invalidHnSkipped = 0; // visits skipped due to invalid HN format
   var processedVNs = {}; // T162: dedup guard for duplicate VN in payload
 
   // Pre-read VISIT_SUMMARY for both round 2 and Phase 2 HN matching
@@ -3094,6 +3115,13 @@ function handleImportConfirm(user, data) {
     var visit = visits[i];
     var vn = String(visit.vn || "").trim();
     if (!vn) continue;
+
+    // Validate HN format (defense-in-depth: frontend already validates)
+    var visitHnRaw = String(visit.hn || "").trim();
+    if (!HN_PATTERN.test(visitHnRaw)) {
+      invalidHnSkipped++;
+      continue;
+    }
 
     // T162: Skip duplicate VN in same payload
     if (processedVNs[vn]) continue;
@@ -3253,6 +3281,7 @@ function handleImportConfirm(user, data) {
       imported_visits: importedVisits,
       updated_pre_registered: updatedPreRegistered,
       imported_meds: importedMeds,
+      invalid_hn_skipped: invalidHnSkipped,
       import_round1_at: round === 1 ? now : null,
     },
   };

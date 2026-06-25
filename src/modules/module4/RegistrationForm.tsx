@@ -174,8 +174,9 @@ export function RegistrationForm() {
                   <Label className="text-xs">HN</Label>
                   <Input
                     {...register(`appointments.${index}.hn`)}
-                    placeholder="000001"
-                    maxLength={6}
+                    placeholder="000000001"
+                    maxLength={9}
+                    inputMode="numeric"
                     className="font-mono"
                   />
                   {errors.appointments?.[index]?.hn && (

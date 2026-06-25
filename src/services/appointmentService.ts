@@ -1,12 +1,13 @@
 import { z } from 'zod'
 import { gasPost } from '@/services/api'
+import { hnSchema } from '@/constants/validation'
 
 // ---------------------------------------------------------------------------
 // Zod Schemas
 // ---------------------------------------------------------------------------
 
 const appointmentSchema = z.object({
-  hn: z.string().regex(/^\d{6}$/, 'HN ต้องเป็นตัวเลข 6 หลัก'),
+  hn: hnSchema,
   patient_name: z.string().min(1, 'กรุณาระบุชื่อ-สกุล'),
   clinic_types: z.array(z.string().min(1)).min(1, 'ต้องเลือกอย่างน้อย 1 คลินิก'),
 })
